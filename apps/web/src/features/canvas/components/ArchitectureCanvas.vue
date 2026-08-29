@@ -427,17 +427,61 @@ function handleNodeDragStop(event: { node: Node }) {
 
   if (kind === 'region') {
     const regionId = event.node.data?.regionId
+
     if (!regionId) {
       return
     }
 
+    const region = architectureStore.architecture.regions.find(
+      (item) =>
+        item.id === regionId,
+    )
+
+    if (!region) {
+      return
+    }
+
+    const nextPosition = {
+      x: event.node.position.x,
+      y: event.node.position.y,
+    }
+
+    const deltaX = nextPosition.x - region.position.x
+
+    const deltaY = nextPosition.y - region.position.y
+
+    if (deltaX === 0 && deltaY === 0
+    ) {
+      return
+    }
+
+    const memberNodes =
+      architectureStore.architecture
+        .nodes.filter(
+          (node) =>
+            node.regionId === regionId,
+        )
+
     architectureStore.execute({
-      type: 'MOVE_REGION',
-      regionId,
-      position: {
-        x: event.node.position.x,
-        y: event.node.position.y,
-      },
+      type: 'COMPOSITE',
+      operations: [
+        {
+          type: 'MOVE_REGION',
+          regionId,
+          position: nextPosition,
+        },
+
+        ...memberNodes.map(
+          (node) => ({
+            type: 'MOVE_NODE' as const,
+            nodeId: node.id,
+            position: {
+              x: node.position.x + deltaX,
+              y:node.position.y + deltaY,
+            },
+          }),
+        ),
+      ],
     })
 
     return
