@@ -3,129 +3,24 @@ import ArchitectureCanvas from './features/canvas/components/ArchitectureCanvas.
 import { useArchitectureStore } from './features/architectures/stores/architecture.store'
 
 const architectureStore = useArchitectureStore()
-
-function addService() {
-  architectureStore.execute({
-    type: 'ADD_NODE',
-
-    node: {
-      id: crypto.randomUUID(),
-      type: 'service',
-      name: 'Core Service',
-
-      position: {
-        x: 300,
-        y: 220,
-      },
-
-      metadata: {
-        technology: 'go',
-      },
-
-      behavior: {},
-    },
-  })
-}
-
-function addDatabase() {
-  architectureStore.execute({
-    type: 'ADD_NODE',
-
-    node: {
-      id: crypto.randomUUID(),
-      type: 'database',
-      name: 'PostgreSQL',
-
-      position: {
-        x: 650,
-        y: 220,
-      },
-
-      metadata: {
-        technology: 'postgresql',
-      },
-
-      behavior: {},
-    },
-  })
-}
-
-function addQueue() {
-  architectureStore.execute({
-    type: 'ADD_NODE',
-
-    node: {
-      id: crypto.randomUUID(),
-      type: 'queue',
-      name: 'RabbitMQ',
-
-      position: {
-        x: 480,
-        y: 420,
-      },
-
-      metadata: {
-        technology: 'rabbitmq',
-      },
-
-      behavior: {},
-    },
-  })
-}
-
-function addCache() {
-  architectureStore.execute({
-    type: 'ADD_NODE',
-
-    node: {
-      id: crypto.randomUUID(),
-      type: 'cache',
-      name: 'Redis',
-
-      position: {
-        x: 760,
-        y: 420,
-      },
-
-      metadata: {
-        technology: 'redis',
-      },
-
-      behavior: {},
-    },
-  })
-}
-
 </script>
 
 <template>
   <div class="app">
     <header class="toolbar">
-      <strong>Akitekt</strong>
+      <strong class="brand">
+        Akitekt
+      </strong>
 
-      <button @click="addService">
-        Add service
-      </button>
+      <div class="history">
+        <button :disabled="!architectureStore.canUndo" @click="architectureStore.undo">
+          Undo
+        </button>
 
-      <button @click="addDatabase">
-        Add PostgreSQL
-      </button>
-
-      <button @click="addQueue">
-        Add RabbitMQ
-      </button>
-
-      <button @click="addCache">
-        Add Redis
-      </button>
-
-      <button :disabled="!architectureStore.canUndo" @click="architectureStore.undo">
-        Undo
-      </button>
-
-      <button :disabled="!architectureStore.canRedo" @click="architectureStore.redo">
-        Redo
-      </button>
+        <button :disabled="!architectureStore.canRedo" @click="architectureStore.redo">
+          Redo
+        </button>
+      </div>
     </header>
 
     <main class="workspace">
@@ -139,21 +34,53 @@ function addCache() {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+
+  background: #fafafa;
 }
 
 .toolbar {
-  height: 56px;
+  height: 52px;
 
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
 
   padding: 0 16px;
 
+  background: white;
   border-bottom: 1px solid #e5e7eb;
 }
 
+.brand {
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #20232a;
+}
+
+.history {
+  display: flex;
+  gap: 6px;
+}
+
+.history button {
+  padding: 6px 10px;
+
+  background: white;
+  border: 1px solid #e2e5e9;
+  border-radius: 6px;
+
+  font-size: 11px;
+
+  cursor: pointer;
+}
+
+.history button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .workspace {
-  height: calc(100vh - 56px);
+  height: calc(100vh - 52px);
 }
 </style>

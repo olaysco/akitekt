@@ -9,8 +9,10 @@ import {
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 
+import NodePalette from './NodePalette.vue'
 import EdgeInspector from './EdgeInspector.vue'
 import NodeInspector from './NodeInspector.vue'
+import type { NodeType } from '../../architectures/domain/node'
 import ArchitectureNode from '../nodes/ArchitectureNode.vue'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 
@@ -38,12 +40,18 @@ function handlePaneClick() {
 const nodes = computed<Node[]>(() =>
   architectureStore.architecture.nodes.map((node) => ({
     id: node.id,
+
     position: node.position,
 
     data: {
       label: node.name,
       nodeType: node.type,
       technology: node.metadata.technology,
+
+      instances: node.metadata.instances,
+      timeoutMs: node.behavior.timeoutMs,
+
+      properties: node.metadata.properties,
     },
 
     type: 'architecture',
@@ -109,26 +117,112 @@ function handleConnect(connection: Connection) {
     },
   })
 }
+
+function addNode(type: NodeType) {
+  const defaults: Record<
+    NodeType,
+    {
+      name: string
+      technology?: string
+    }
+  > = {
+    client: {
+      name: 'Client',
+    },
+
+    service: {
+      name: 'Service',
+    },
+
+    worker: {
+      name: 'Worker',
+    },
+
+    database: {
+      name: 'Database',
+    },
+
+    cache: {
+      name: 'Cache',
+    },
+
+    queue: {
+      name: 'Queue',
+    },
+
+    stream: {
+      name: 'Stream',
+    },
+
+    'load-balancer': {
+      name: 'Load Balancer',
+    },
+
+    gateway: {
+      name: 'API Gateway',
+    },
+
+    external: {
+      name: 'External System',
+    },
+
+    storage: {
+      name: 'Storage',
+    },
+
+    scheduler: {
+      name: 'Scheduler',
+    },
+
+    custom: {
+      name: 'Component',
+    },
+  }
+
+  const definition = defaults[type]
+
+  architectureStore.execute({
+    type: 'ADD_NODE',
+
+    node: {
+      id: crypto.randomUUID(),
+
+      type,
+
+      name: definition.name,
+
+      position: {
+        x: 320 + architectureStore.architecture.nodes.length * 30,
+        y: 180 + architectureStore.architecture.nodes.length * 30,
+      },
+
+      metadata: {
+        technology: definition.technology,
+      },
+
+      behavior: {},
+    },
+  })
+}
+
 </script>
 
 <template>
   <div class="architecture-canvas">
     <VueFlow :nodes="nodes" :edges="edges" :fit-view-on-init="true" @node-drag-stop="handleNodeDragStop"
-      @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick">
+      @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick"
+      @node-click="handleNodeClick">
       <template #node-architecture="nodeProps">
-        <ArchitectureNode :data="nodeProps.data" />
+        <ArchitectureNode :data="nodeProps.data" :selected="selectedNodeId === nodeProps.id" />
       </template>
 
       <Background />
       <Controls />
     </VueFlow>
 
-    <EdgeInspector
-      :edge-id="selectedEdgeId"
-    />
-    <NodeInspector
-      :node-id="selectedNodeId"
-    />
+    <NodePalette @add="addNode" />
+    <EdgeInspector :edge-id="selectedEdgeId" />
+    <NodeInspector :node-id="selectedNodeId" />
   </div>
 </template>
 

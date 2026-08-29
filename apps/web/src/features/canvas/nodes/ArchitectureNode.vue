@@ -2,251 +2,426 @@
 import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 
+type NodePropertyValue =
+    | string
+    | number
+    | boolean
+
 type Props = {
-  data: {
-    label: string
-    nodeType: string
-    technology?: string
-  }
+    selected?: boolean
+
+    data: {
+        label: string
+        nodeType: string
+
+        technology?: string
+        instances?: number
+        timeoutMs?: number
+
+        properties?: Record<
+            string,
+            NodePropertyValue
+        >
+    }
 }
 
 const props = defineProps<Props>()
 
-const subtitle = computed(() => {
-  return props.data.technology || props.data.nodeType
-})
+const subtitle = computed(() =>
+    props.data.technology ||
+    props.data.nodeType,
+)
 
-const iconLabel = computed(() => {
-  switch (props.data.nodeType) {
-    case 'service':
-      return 'S'
+const isExternal = computed(
+    () => props.data.nodeType === 'external',
+)
 
-    case 'database':
-      return 'DB'
+const chips = computed(() => {
+    const result: string[] = []
 
-    case 'queue':
-      return 'Q'
+    if (props.data.instances) {
+        result.push(
+            `×${props.data.instances} ${props.data.instances === 1
+                ? 'instance'
+                : 'instances'
+            }`,
+        )
+    }
 
-    case 'cache':
-      return 'C'
+    if (
+        props.data.timeoutMs !== undefined
+    ) {
+        const milliseconds =
+            props.data.timeoutMs
 
-    case 'worker':
-      return 'W'
+        const timeout =
+            milliseconds >= 1000
+                ? `${milliseconds / 1000
+                } s`
+                : `${milliseconds} ms`
 
-    case 'client':
-      return 'U'
+        result.push(`timeout ${timeout}`)
+    }
 
-    case 'external':
-      return 'EXT'
+    const properties =
+        props.data.properties ?? {}
 
-    case 'gateway':
-      return 'GW'
+    Object.entries(properties)
+        .slice(0, 3)
+        .forEach(([key, value]) => {
+            if (
+                value === false ||
+                value === undefined ||
+                value === null
+            ) {
+                return
+            }
 
-    case 'load-balancer':
-      return 'LB'
+            if (value === true) {
+                result.push(key)
+                return
+            }
 
-    case 'storage':
-      return 'ST'
+            result.push(`${key} ${value}`)
+        })
 
-    case 'stream':
-      return 'STR'
-
-    case 'scheduler':
-      return 'SCH'
-
-    default:
-      return '•'
-  }
-})
-
-const nodeClass = computed(() => {
-  return `node-${props.data.nodeType}`
+    return result.slice(0, 3)
 })
 </script>
 
 <template>
-  <div
-    class="node-card"
-    :class="nodeClass"
-  >
-    <Handle
-      type="target"
-      :position="Position.Left"
-      class="handle"
-    />
+    <div class="architecture-node" :class="{
+        selected,
+        external: isExternal,
+    }">
+        <Handle type="target" :position="Position.Left" class="node-handle" />
 
-    <div class="node-icon">
-      {{ iconLabel }}
+        <div class="node-main">
+            <div class="node-icon">
+                <!-- Database -->
+                <svg v-if="data.nodeType === 'database'" viewBox="0 0 28 28" aria-hidden="true">
+                    <ellipse cx="14" cy="7" rx="8" ry="3.5" />
+
+                    <path d="
+              M6 7v7
+              c0 1.9 3.6 3.5 8 3.5
+              s8-1.6 8-3.5V7
+            " />
+
+                    <path d="
+              M6 14v7
+              c0 1.9 3.6 3.5 8 3.5
+              s8-1.6 8-3.5v-7
+            " />
+                </svg>
+
+                <!-- Queue -->
+                <svg v-else-if="data.nodeType === 'queue'" viewBox="0 0 28 28" aria-hidden="true">
+                    <rect x="5" y="6" width="18" height="4" rx="1" />
+
+                    <rect x="5" y="12" width="18" height="4" rx="1" />
+
+                    <rect x="5" y="18" width="18" height="4" rx="1" />
+                </svg>
+
+                <!-- Worker -->
+                <svg v-else-if="data.nodeType === 'worker'" viewBox="0 0 28 28" aria-hidden="true">
+                    <circle cx="14" cy="14" r="9" />
+
+                    <path d="M14 9v5l4 2" />
+                </svg>
+
+                <!-- Client -->
+                <svg v-else-if="data.nodeType === 'client'" viewBox="0 0 28 28" aria-hidden="true">
+                    <circle cx="14" cy="10" r="4" />
+
+                    <path d="
+              M7 23
+              c.8-5 3.5-7.5 7-7.5
+              s6.2 2.5 7 7.5
+            " />
+                </svg>
+
+                <!-- External -->
+                <svg v-else-if="data.nodeType === 'external'" viewBox="0 0 28 28" aria-hidden="true">
+                    <rect x="5" y="5" width="18" height="18" rx="3" stroke-dasharray="3 2" />
+
+                    <path d="
+              M12 16
+              l7-7
+              M14 9
+              h5
+              v5
+            " />
+                </svg>
+
+                <!-- Cache -->
+                <svg v-else-if="data.nodeType === 'cache'" viewBox="0 0 28 28" aria-hidden="true">
+                    <path d="
+              M7 8
+              h14
+              v5
+              H7
+              z
+            " />
+
+                    <path d="
+              M7 15
+              h14
+              v5
+              H7
+              z
+            " />
+
+                    <circle cx="18.5" cy="10.5" r="1" />
+
+                    <circle cx="18.5" cy="17.5" r="1" />
+                </svg>
+
+                <!-- Gateway / Load balancer -->
+                <svg v-else-if="
+                    data.nodeType === 'gateway' ||
+                    data.nodeType ===
+                    'load-balancer'
+                " viewBox="0 0 28 28" aria-hidden="true">
+                    <circle cx="7" cy="14" r="2" />
+
+                    <circle cx="21" cy="8" r="2" />
+
+                    <circle cx="21" cy="20" r="2" />
+
+                    <path d="
+              M9 14
+              h4
+
+              M13 14
+              l6-5
+
+              M13 14
+              l6 5
+            " />
+                </svg>
+
+                <!-- Generic service -->
+                <svg v-else viewBox="0 0 28 28" aria-hidden="true">
+                    <rect x="5" y="6" width="18" height="16" rx="3" />
+
+                    <path d="
+              M9 11
+              h10
+
+              M9 15
+              h7
+            " />
+
+                    <circle cx="19" cy="18" r="1" />
+                </svg>
+            </div>
+
+            <div class="node-copy">
+                <div class="node-name">
+                    {{ data.label }}
+                </div>
+
+                <div class="node-subtitle">
+                    {{ subtitle }}
+                </div>
+
+                <div v-if="chips.length" class="node-chips">
+                    <span v-for="chip in chips" :key="chip" class="node-chip">
+                        {{ chip }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <Handle type="source" :position="Position.Right" class="node-handle" />
     </div>
-
-    <div class="node-content">
-      <div class="node-label">
-        {{ data.label }}
-      </div>
-
-      <div class="node-subtitle">
-        {{ subtitle }}
-      </div>
-    </div>
-
-    <Handle
-      type="source"
-      :position="Position.Right"
-      class="handle"
-    />
-  </div>
 </template>
 
 <style scoped>
-.node-card {
-  --node-accent: #667085;
-  --node-soft: #f3f5f8;
+.architecture-node {
+    width: 204px;
+    min-height: 88px;
 
-  min-width: 190px;
-  min-height: 72px;
+    position: relative;
 
-  display: flex;
-  align-items: center;
-  gap: 12px;
+    padding: 13px 14px;
 
-  padding: 14px 16px;
+    background:
+        oklch(1 0 0);
 
-  background: white;
+    border:
+        1px solid oklch(0.875 0.008 258);
 
-  border: 1px solid #d9dde5;
-  border-left: 4px solid var(--node-accent);
+    border-radius: 11px;
 
-  border-radius: 12px;
+    color:
+        oklch(0.25 0.015 258);
 
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 4px 10px rgba(16, 24, 40, 0.05);
+    font-family:
+        "IBM Plex Sans",
+        system-ui,
+        sans-serif;
 
-  transition:
-    border-color 120ms ease,
-    box-shadow 120ms ease,
-    transform 120ms ease;
+    box-shadow:
+        0 1px 2px oklch(0.5 0.02 258 / 0.04);
+
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease;
 }
 
-.node-card:hover {
-  box-shadow:
-    0 2px 4px rgba(16, 24, 40, 0.06),
-    0 6px 16px rgba(16, 24, 40, 0.08);
+.architecture-node.external {
+    border-style: dashed;
+}
+
+.architecture-node.selected {
+    border:
+        1.5px solid oklch(0.60 0.19 258);
+
+    box-shadow:
+        0 0 0 3px oklch(0.60 0.19 258 / 0.16);
+}
+
+.node-main {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 11px;
 }
 
 .node-icon {
-  width: 40px;
-  height: 40px;
+    width: 31px;
+    height: 31px;
 
-  flex: 0 0 40px;
+    flex: 0 0 31px;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-  border-radius: 10px;
-
-  background: var(--node-soft);
-  color: var(--node-accent);
-
-  font-size: 11px;
-  font-weight: 700;
+    color:
+        oklch(0.48 0.018 258);
 }
 
-.node-content {
-  min-width: 0;
+.node-icon svg {
+    width: 28px;
+    height: 28px;
 
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+    fill: none;
+
+    stroke: currentColor;
+    stroke-width: 1.4;
+
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
-.node-label {
-  font-size: 14px;
-  font-weight: 600;
+.node-icon svg rect {
+    vector-effect:
+        non-scaling-stroke;
+}
 
-  color: #16181d;
+.node-icon svg ellipse,
+.node-icon svg circle,
+.node-icon svg path {
+    vector-effect:
+        non-scaling-stroke;
+}
 
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.node-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.node-name {
+    overflow: hidden;
+
+    color:
+        oklch(0.24 0.015 258);
+
+    font-size: 12px;
+    font-weight: 600;
+
+    line-height: 1.3;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .node-subtitle {
-  font-size: 12px;
+    margin-top: 2px;
 
-  color: #777f8c;
+    overflow: hidden;
 
-  text-transform: capitalize;
+    color:
+        oklch(0.56 0.014 258);
+
+    font-size: 10.5px;
+    font-weight: 400;
+
+    line-height: 1.35;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-.handle {
-  width: 9px;
-  height: 9px;
+.node-chips {
+    display: flex;
+    flex-wrap: wrap;
 
-  border: 2px solid white;
-  background: var(--node-accent);
+    gap: 4px;
+
+    margin-top: 9px;
 }
 
-/* Node identities */
+.node-chip {
+    padding: 2px 6px;
 
-.node-service {
-  --node-accent: #4f6bed;
-  --node-soft: #eef2ff;
+    border:
+        1px solid oklch(0.895 0.008 258);
+
+    border-radius: 5px;
+
+    background:
+        oklch(0.975 0.004 258);
+
+    color:
+        oklch(0.46 0.014 258);
+
+    font-size: 9px;
+    font-weight: 500;
+
+    line-height: 1.4;
+
+    white-space: nowrap;
 }
 
-.node-database {
-  --node-accent: #7c5ce7;
-  --node-soft: #f3efff;
+.node-handle {
+    width: 8px;
+    height: 8px;
+
+    border:
+        1.5px solid white;
+
+    background:
+        oklch(0.66 0.018 258);
+
+    opacity: 0;
+
+    transition:
+        opacity 100ms ease,
+        background 100ms ease;
 }
 
-.node-queue {
-  --node-accent: #d97706;
-  --node-soft: #fff7e8;
+.architecture-node:hover .node-handle,
+.architecture-node.selected .node-handle {
+    opacity: 1;
 }
 
-.node-cache {
-  --node-accent: #0f9f6e;
-  --node-soft: #eafaf4;
-}
-
-.node-worker {
-  --node-accent: #475467;
-  --node-soft: #f2f4f7;
-}
-
-.node-client {
-  --node-accent: #0e7490;
-  --node-soft: #e9f8fb;
-}
-
-.node-external {
-  --node-accent: #b54708;
-  --node-soft: #fff4e5;
-}
-
-.node-gateway {
-  --node-accent: #9333ea;
-  --node-soft: #f7edff;
-}
-
-.node-load-balancer {
-  --node-accent: #2563eb;
-  --node-soft: #edf4ff;
-}
-
-.node-storage {
-  --node-accent: #64748b;
-  --node-soft: #f1f5f9;
-}
-
-.node-stream {
-  --node-accent: #c026d3;
-  --node-soft: #fdf0ff;
-}
-
-.node-scheduler {
-  --node-accent: #ca8a04;
-  --node-soft: #fffbe6;
+.node-handle:hover {
+    background:
+        oklch(0.60 0.19 258);
 }
 </style>
