@@ -22,6 +22,7 @@ import { useArchitectureStore } from '../../architectures/stores/architecture.st
 const architectureStore = useArchitectureStore()
 const selectedEdgeId = ref<string | null>(null)
 const selectedNodeId = ref<string | null>(null)
+const selectedRegionId = ref<string | null>(null)
 
 type RegionDraft = {
   start: {
@@ -138,20 +139,31 @@ const annotationToolActive = ref(false)
 
 const editingAnnotationId = ref<string | null>(null)
 
-function handleNodeClick(event: { node: Node }) {
-  if (event.node.data?.kind !== 'architecture') {
-    selectedNodeId.value = null
-    selectedEdgeId.value = null
+
+
+function handleNodeClick(
+  event: { node: Node },
+) {
+  const kind = event.node.data?.kind
+
+  selectedNodeId.value = null
+  selectedEdgeId.value = null
+  selectedRegionId.value = null
+
+  if (kind === 'architecture') {
+    selectedNodeId.value = event.node.id
     return
   }
 
-  selectedNodeId.value = event.node.id
-  selectedEdgeId.value = null
+  if (kind === 'region') {
+    selectedRegionId.value = event.node.data?.regionId ?? null
+  }
 }
 
 function handleEdgeClick(event: { edge: Edge }) {
   selectedEdgeId.value = event.edge.id
   selectedNodeId.value = null
+  selectedRegionId.value = null
 }
 
 function handlePaneClick(event: MouseEvent) {
@@ -373,7 +385,8 @@ const edges = computed<Edge[]>(() =>
 )
 
 function handleNodeDragStop(event: { node: Node }) {
-  if (event.node.data?.kind === 'annotation') {
+  const kind = event.node.data?.kind
+  if (kind === 'annotation') {
     architectureStore.execute({
       type: 'UPDATE_ANNOTATION',
       annotationId: event.node.id,
@@ -383,6 +396,24 @@ function handleNodeDragStop(event: { node: Node }) {
           x: event.node.position.x,
           y: event.node.position.y,
         },
+      },
+    })
+
+    return
+  }
+
+  if (kind === 'region') {
+    const regionId = event.node.data?.regionId
+    if (!regionId) {
+      return
+    }
+
+    architectureStore.execute({
+      type: 'MOVE_REGION',
+      regionId,
+      position: {
+        x: event.node.position.x,
+        y: event.node.position.y,
       },
     })
 
