@@ -4,6 +4,7 @@ import { VueFlow, type Node, type Edge } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 
+import ArchitectureNode from '../nodes/ArchitectureNode.vue'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 
 const architectureStore = useArchitectureStore()
@@ -19,7 +20,7 @@ const nodes = computed<Node[]>(() =>
       technology: node.metadata.technology,
     },
 
-    type: 'default',
+    type: 'architecture',
   })),
 )
 
@@ -58,6 +59,11 @@ function handleNodeDragStop(event: { node: Node }) {
       :fit-view-on-init="true"
       @node-drag-stop="handleNodeDragStop"
     >
+      <template #node-architecture="nodeProps">
+        <ArchitectureNode
+          :data="nodeProps.data"
+        />
+      </template>
       <Background />
 
       <Controls />

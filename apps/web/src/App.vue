@@ -49,6 +49,53 @@ function addDatabase() {
     },
   })
 }
+
+function addQueue() {
+  architectureStore.execute({
+    type: 'ADD_NODE',
+
+    node: {
+      id: crypto.randomUUID(),
+      type: 'queue',
+      name: 'RabbitMQ',
+
+      position: {
+        x: 480,
+        y: 420,
+      },
+
+      metadata: {
+        technology: 'rabbitmq',
+      },
+
+      behavior: {},
+    },
+  })
+}
+
+function addCache() {
+  architectureStore.execute({
+    type: 'ADD_NODE',
+
+    node: {
+      id: crypto.randomUUID(),
+      type: 'cache',
+      name: 'Redis',
+
+      position: {
+        x: 760,
+        y: 420,
+      },
+
+      metadata: {
+        technology: 'redis',
+      },
+
+      behavior: {},
+    },
+  })
+}
+
 </script>
 
 <template>
@@ -64,17 +111,19 @@ function addDatabase() {
         Add PostgreSQL
       </button>
 
-      <button
-        :disabled="!architectureStore.canUndo"
-        @click="architectureStore.undo"
-      >
+      <button @click="addQueue">
+        Add RabbitMQ
+      </button>
+
+      <button @click="addCache">
+        Add Redis
+      </button>
+
+      <button :disabled="!architectureStore.canUndo" @click="architectureStore.undo">
         Undo
       </button>
 
-      <button
-        :disabled="!architectureStore.canRedo"
-        @click="architectureStore.redo"
-      >
+      <button :disabled="!architectureStore.canRedo" @click="architectureStore.redo">
         Redo
       </button>
     </header>
