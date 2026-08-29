@@ -111,7 +111,12 @@ export type ViewOperation =
   | MoveRegionOperation
   | ResizeRegionOperation
 
+export type CompositeOperation = {
+  type: 'COMPOSITE'
+  operations: DocumentOperation[]
+}
+
 export type DocumentOperation =
   | ArchitectureOperation
   | ViewOperation
-  
+  | CompositeOperation
