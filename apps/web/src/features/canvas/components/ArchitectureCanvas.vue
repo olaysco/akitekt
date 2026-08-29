@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import {
   VueFlow,
   type Node,
@@ -9,10 +9,31 @@ import {
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 
+import EdgeInspector from './EdgeInspector.vue'
+import NodeInspector from './NodeInspector.vue'
 import ArchitectureNode from '../nodes/ArchitectureNode.vue'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 
 const architectureStore = useArchitectureStore()
+
+const selectedEdgeId = ref<string | null>(null)
+
+const selectedNodeId = ref<string | null>(null)
+
+function handleNodeClick(event: { node: Node }) {
+  selectedNodeId.value = event.node.id
+  selectedEdgeId.value = null
+}
+
+function handleEdgeClick(event: { edge: Edge }) {
+  selectedEdgeId.value = event.edge.id
+  selectedNodeId.value = null
+}
+
+function handlePaneClick() {
+  selectedNodeId.value = null
+  selectedEdgeId.value = null
+}
 
 const nodes = computed<Node[]>(() =>
   architectureStore.architecture.nodes.map((node) => ({
@@ -93,7 +114,7 @@ function handleConnect(connection: Connection) {
 <template>
   <div class="architecture-canvas">
     <VueFlow :nodes="nodes" :edges="edges" :fit-view-on-init="true" @node-drag-stop="handleNodeDragStop"
-      @connect="handleConnect">
+      @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick">
       <template #node-architecture="nodeProps">
         <ArchitectureNode :data="nodeProps.data" />
       </template>
@@ -101,11 +122,20 @@ function handleConnect(connection: Connection) {
       <Background />
       <Controls />
     </VueFlow>
+
+    <EdgeInspector
+      :edge-id="selectedEdgeId"
+    />
+    <NodeInspector
+      :node-id="selectedNodeId"
+    />
   </div>
 </template>
 
 <style scoped>
 .architecture-canvas {
+  position: relative;
+
   width: 100%;
   height: 100%;
   min-height: 600px;
