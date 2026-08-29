@@ -14,6 +14,7 @@ import EdgeInspector from './EdgeInspector.vue'
 import NodeInspector from './NodeInspector.vue'
 import type { NodeType } from '../../architectures/domain/node'
 import ArchitectureNode from '../nodes/ArchitectureNode.vue'
+import CanvasToolRail, { type AddComponentPayload, } from './CanvasToolRail.vue'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 
 const architectureStore = useArchitectureStore()
@@ -21,6 +22,100 @@ const architectureStore = useArchitectureStore()
 const selectedEdgeId = ref<string | null>(null)
 
 const selectedNodeId = ref<string | null>(null)
+
+function addComponent(
+  payload: AddComponentPayload,
+) {
+  const typeNames: Record<NodeType, string> = {
+    client: 'Client',
+    service: 'Service',
+    worker: 'Worker',
+    database: 'Database',
+    cache: 'Cache',
+    queue: 'Queue',
+    stream: 'Stream',
+    'load-balancer': 'Load Balancer',
+    gateway: 'Gateway',
+    external: 'External System',
+    storage: 'Storage',
+    scheduler: 'Scheduler',
+    custom: 'Component',
+  }
+
+  const technology =
+    payload.technology
+
+  const technologyNames: Record<
+    string,
+    string
+  > = {
+    PostgreSQL: 'PostgreSQL',
+    MySQL: 'MySQL',
+    MongoDB: 'MongoDB',
+    DynamoDB: 'DynamoDB',
+    Cassandra: 'Cassandra',
+
+    RabbitMQ: 'RabbitMQ',
+    Kafka: 'Kafka',
+    SQS: 'SQS',
+    'Pub / Sub': 'Pub / Sub',
+    NATS: 'NATS',
+
+    Redis: 'Redis',
+    Memcached: 'Memcached',
+
+    Browser: 'Client',
+    'Mobile app': 'Mobile App',
+    CLI: 'CLI',
+
+    'Third-party API':
+      'External API',
+
+    SaaS: 'External SaaS',
+    Partner: 'Partner System',
+
+    Kong: 'Kong',
+    Envoy: 'Envoy',
+    Nginx: 'Nginx',
+
+    ALB: 'Load Balancer',
+    HAProxy: 'HAProxy',
+  }
+
+  const name =
+    technology &&
+      technologyNames[technology]
+      ? technologyNames[technology]
+      : typeNames[payload.type]
+
+  const index =
+    architectureStore.architecture
+      .nodes.length
+
+  architectureStore.execute({
+    type: 'ADD_NODE',
+
+    node: {
+      id: crypto.randomUUID(),
+
+      type: payload.type,
+
+      name,
+
+      position: {
+        x: 260 + (index % 4) * 38,
+        y: 180 + (index % 4) * 38,
+      },
+
+      metadata: {
+        technology:
+          technology?.toLowerCase(),
+      },
+
+      behavior: {},
+    },
+  })
+}
 
 function handleNodeClick(event: { node: Node }) {
   selectedNodeId.value = event.node.id
@@ -220,7 +315,8 @@ function addNode(type: NodeType) {
       <Controls />
     </VueFlow>
 
-    <NodePalette @add="addNode" />
+    <CanvasToolRail @add-component="addComponent" />
+    <!-- <NodePalette @add="addNode" /> -->
     <EdgeInspector :edge-id="selectedEdgeId" />
     <NodeInspector :node-id="selectedNodeId" />
   </div>
