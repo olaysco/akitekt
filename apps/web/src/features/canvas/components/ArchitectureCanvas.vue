@@ -185,25 +185,6 @@ function handlePaneClick(event: MouseEvent) {
   selectedEdgeId.value = null
   selectedRegionId.value = null
 
-
-  if (pendingComponent.value) {
-    const position =
-      screenToFlowCoordinate({
-        x: event.clientX,
-        y: event.clientY,
-      })
-
-    createComponent(
-      pendingComponent.value,
-      position,
-    )
-
-    pendingComponent.value = null
-    placementPosition.value = null
-
-    return
-  }
-
   if (!annotationToolActive.value) {
     return
   }
@@ -827,10 +808,43 @@ function handleCanvasMouseMove(event: MouseEvent) {
       y: event.clientY,
     })
 }
+function handleComponentMouseDown( event: MouseEvent,) {
+  if (!pendingComponent.value) {
+    return
+  }
+
+  const target = event.target as HTMLElement
+  if (
+    target.closest('.canvas-tool-rail') ||
+    target.closest('.inspector')
+  ) {
+    return
+  }
+
+  const pointerPosition =
+    screenToFlowCoordinate({
+      x: event.clientX,
+      y: event.clientY,
+    })
+
+  createComponent(
+    pendingComponent.value,
+    {
+      x: pointerPosition.x - 102,
+      y: pointerPosition.y - 44,
+    },
+  )
+
+  pendingComponent.value = null
+  placementPosition.value = null
+
+  event.preventDefault()
+  event.stopPropagation()
+}
 </script>
 
 <template>
-  <div class="architecture-canvas" @mousemove="handleCanvasMouseMove">
+  <div class="architecture-canvas" @mousedown="handleComponentMouseDown" @mousemove="handleCanvasMouseMove">
     <VueFlow :nodes="nodes" :edges="edges" :fit-view-on-init="true" @node-drag-stop="handleNodeDragStop"
       @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick"
       @node-double-click="handleNodeDoubleClick" :class="{ 'component-placement': pendingComponent !== null }">
