@@ -15,10 +15,48 @@ export type AddComponentPayload = {
 
 const emit = defineEmits<{
     addComponent: [payload: AddComponentPayload]
+    annotationTool: []
+    regionTool: []
 }>()
 
+const regionActive = ref(false)
 const componentsOpen = ref(false)
+const annotationActive = ref(false)
 const selectedRole = ref<ComponentRole | null>(null)
+
+function toggleAnnotation() {
+  annotationActive.value =
+    !annotationActive.value
+
+  regionActive.value = false
+  componentsOpen.value = false
+  selectedRole.value = null
+
+  emit('annotationTool')
+}
+
+function deactivateAnnotation() {
+  annotationActive.value = false
+}
+
+function toggleRegion() {
+  regionActive.value = !regionActive.value
+
+  annotationActive.value = false
+  componentsOpen.value = false
+  selectedRole.value = null
+
+  emit('regionTool')
+}
+
+function deactivateRegion() {
+  regionActive.value = false
+}
+
+defineExpose({
+deactivateRegion,
+  deactivateAnnotation,
+})
 
 const roles: ComponentRole[] = [
     {
@@ -75,11 +113,14 @@ const roles: ComponentRole[] = [
 ]
 
 function toggleComponents() {
-    componentsOpen.value = !componentsOpen.value
+  componentsOpen.value = !componentsOpen.value
 
-    if (!componentsOpen.value) {
-        selectedRole.value = null
-    }
+  annotationActive.value = false
+  regionActive.value = false
+
+  if (!componentsOpen.value) {
+    selectedRole.value = null
+  }
 }
 
 function selectRole(role: ComponentRole) {
@@ -109,12 +150,12 @@ function addComponent(role: ComponentRole, technology: string) {
                 <span class="tool-tooltip">Components</span>
             </button>
 
-            <button class="tool-button" title="Annotation" disabled>
+            <button class="tool-button" :class="{ active: annotationActive }" title="Annotation" @click.stop="toggleAnnotation" >
                 <span class="tool-symbol text-symbol">T</span>
                 <span class="tool-tooltip">Annotation</span>
             </button>
 
-            <button class="tool-button" title="Region" disabled>
+            <button class="tool-button" title="Region" :class="{ active: regionActive }" @click.stop="toggleRegion">
                 <span class="tool-symbol region-symbol">□</span>
                 <span class="tool-tooltip">Region</span>
             </button>
