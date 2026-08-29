@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { VueFlow, type Node, type Edge } from '@vue-flow/core'
+import {
+  VueFlow,
+  type Node,
+  type Edge,
+  type Connection,
+} from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 
@@ -49,23 +54,51 @@ function handleNodeDragStop(event: { node: Node }) {
     },
   })
 }
+
+function handleConnect(connection: Connection) {
+  if (!connection.source || !connection.target) {
+    return
+  }
+
+  if (connection.source === connection.target) {
+    return
+  }
+
+  architectureStore.execute({
+    type: 'ADD_EDGE',
+
+    edge: {
+      id: crypto.randomUUID(),
+
+      source: {
+        nodeId: connection.source,
+        portId: connection.sourceHandle ?? undefined,
+      },
+
+      target: {
+        nodeId: connection.target,
+        portId: connection.targetHandle ?? undefined,
+      },
+
+      type: 'sync',
+
+      protocol: 'http',
+
+      behavior: {},
+    },
+  })
+}
 </script>
 
 <template>
   <div class="architecture-canvas">
-    <VueFlow
-      :nodes="nodes"
-      :edges="edges"
-      :fit-view-on-init="true"
-      @node-drag-stop="handleNodeDragStop"
-    >
+    <VueFlow :nodes="nodes" :edges="edges" :fit-view-on-init="true" @node-drag-stop="handleNodeDragStop"
+      @connect="handleConnect">
       <template #node-architecture="nodeProps">
-        <ArchitectureNode
-          :data="nodeProps.data"
-        />
+        <ArchitectureNode :data="nodeProps.data" />
       </template>
-      <Background />
 
+      <Background />
       <Controls />
     </VueFlow>
   </div>
