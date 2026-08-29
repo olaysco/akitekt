@@ -24,6 +24,7 @@ const architectureStore = useArchitectureStore()
 const selectedEdgeId = ref<string | null>(null)
 const selectedNodeId = ref<string | null>(null)
 const selectedRegionId = ref<string | null>(null)
+const pendingComponent = ref<AddComponentPayload | null>(null)
 
 type RegionDraft = {
   start: {
@@ -40,9 +41,18 @@ type RegionDraft = {
 const regionToolActive = ref(false)
 const regionDraft = ref<RegionDraft | null>(null)
 
-function addComponent(
-  payload: AddComponentPayload,
-) {
+function selectComponent(payload: AddComponentPayload) {
+  pendingComponent.value = payload
+
+  annotationToolActive.value = false
+  regionToolActive.value = false
+
+  selectedNodeId.value = null
+  selectedEdgeId.value = null
+  selectedRegionId.value = null
+}
+
+function createComponent(payload: AddComponentPayload, position: { x: number, y: number }) {
   const typeNames: Record<NodeType, string> = {
     client: 'Client',
     service: 'Service',
@@ -105,22 +115,14 @@ function addComponent(
       ? technologyNames[technology]
       : typeNames[payload.type]
 
-  const index = architectureStore.architecture.nodes.length
-
   architectureStore.execute({
     type: 'ADD_NODE',
 
     node: {
       id: crypto.randomUUID(),
-
       type: payload.type,
-
       name,
-
-      position: {
-        x: 260 + (index % 4) * 38,
-        y: 180 + (index % 4) * 38,
-      },
+      position,
 
       metadata: {
         technology:
@@ -171,8 +173,28 @@ function handlePaneClick(event: MouseEvent) {
   if (regionToolActive.value) {
     return
   }
+
   selectedNodeId.value = null
   selectedEdgeId.value = null
+  selectedRegionId.value = null
+
+
+  if (pendingComponent.value) {
+    const position =
+      screenToFlowCoordinate({
+        x: event.clientX,
+        y: event.clientY,
+      })
+
+    createComponent(
+      pendingComponent.value,
+      position,
+    )
+
+    pendingComponent.value = null
+
+    return
+  }
 
   if (!annotationToolActive.value) {
     return
@@ -477,7 +499,7 @@ function handleNodeDragStop(event: { node: Node }) {
             nodeId: node.id,
             position: {
               x: node.position.x + deltaX,
-              y:node.position.y + deltaY,
+              y: node.position.y + deltaY,
             },
           }),
         ),
@@ -744,7 +766,7 @@ function handleRegionMouseUp() {
   <div class="architecture-canvas">
     <VueFlow :nodes="nodes" :edges="edges" :fit-view-on-init="true" @node-drag-stop="handleNodeDragStop"
       @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick"
-      @node-double-click="handleNodeDoubleClick">
+      @node-double-click="handleNodeDoubleClick" :class="{ 'component-placement': pendingComponent !== null }">
       <template #node-architecture="nodeProps">
         <ArchitectureNode :data="nodeProps.data" :selected="selectedNodeId === nodeProps.id" />
       </template>
@@ -771,7 +793,7 @@ function handleRegionMouseUp() {
 
     <div v-if="regionToolActive" class="region-draw-layer" @mousedown.stop.prevent="handleRegionDrawStart" />
 
-    <CanvasToolRail ref="toolRail" @add-component="addComponent" @annotation-tool="handleAnnotationTool"
+    <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"
       @region-tool="handleRegionTool" />
     <RegionInspector :region-id="selectedRegionId" />
     <EdgeInspector :edge-id="selectedEdgeId" />
