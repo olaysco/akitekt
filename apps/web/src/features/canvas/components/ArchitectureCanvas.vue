@@ -25,6 +25,7 @@ const selectedEdgeId = ref<string | null>(null)
 const selectedNodeId = ref<string | null>(null)
 const selectedRegionId = ref<string | null>(null)
 const pendingComponent = ref<AddComponentPayload | null>(null)
+const placementPosition = ref<{ x: number; y: number } | null>(null)
 
 type RegionDraft = {
   start: {
@@ -41,11 +42,75 @@ type RegionDraft = {
 const regionToolActive = ref(false)
 const regionDraft = ref<RegionDraft | null>(null)
 
+const typeNames: Record<NodeType, string> = {
+  client: 'Client',
+  service: 'Service',
+  worker: 'Worker',
+  database: 'Database',
+  cache: 'Cache',
+  queue: 'Queue',
+  stream: 'Stream',
+  'load-balancer': 'Load Balancer',
+  gateway: 'Gateway',
+  external: 'External System',
+  storage: 'Storage',
+  scheduler: 'Scheduler',
+  custom: 'Component',
+}
+
+const technologyNames: Record<string, string> = {
+  PostgreSQL: 'PostgreSQL',
+  MySQL: 'MySQL',
+  MongoDB: 'MongoDB',
+  DynamoDB: 'DynamoDB',
+  Cassandra: 'Cassandra',
+
+  RabbitMQ: 'RabbitMQ',
+  Kafka: 'Kafka',
+  SQS: 'SQS',
+  'Pub / Sub': 'Pub / Sub',
+  NATS: 'NATS',
+
+  Redis: 'Redis',
+  Memcached: 'Memcached',
+
+  Browser: 'Client',
+  'Mobile app': 'Mobile App',
+  CLI: 'CLI',
+
+  'Third-party API': 'External API',
+  SaaS: 'External SaaS',
+  Partner: 'Partner System',
+
+  Kong: 'Kong',
+  Envoy: 'Envoy',
+  Nginx: 'Nginx',
+
+  ALB: 'Load Balancer',
+  HAProxy: 'HAProxy',
+}
+
+function getComponentName(
+  payload: AddComponentPayload,
+) {
+  const technology = payload.technology
+
+  return (
+    (technology &&
+      technologyNames[technology]) ||
+    typeNames[payload.type]
+  )
+}
+
 function selectComponent(payload: AddComponentPayload) {
   pendingComponent.value = payload
+  placementPosition.value = null
 
   annotationToolActive.value = false
   regionToolActive.value = false
+
+  toolRail.value?.deactivateAnnotation()
+  toolRail.value?.deactivateRegion()
 
   selectedNodeId.value = null
   selectedEdgeId.value = null
@@ -53,67 +118,9 @@ function selectComponent(payload: AddComponentPayload) {
 }
 
 function createComponent(payload: AddComponentPayload, position: { x: number, y: number }) {
-  const typeNames: Record<NodeType, string> = {
-    client: 'Client',
-    service: 'Service',
-    worker: 'Worker',
-    database: 'Database',
-    cache: 'Cache',
-    queue: 'Queue',
-    stream: 'Stream',
-    'load-balancer': 'Load Balancer',
-    gateway: 'Gateway',
-    external: 'External System',
-    storage: 'Storage',
-    scheduler: 'Scheduler',
-    custom: 'Component',
-  }
 
   const technology =
     payload.technology
-
-  const technologyNames: Record<
-    string,
-    string
-  > = {
-    PostgreSQL: 'PostgreSQL',
-    MySQL: 'MySQL',
-    MongoDB: 'MongoDB',
-    DynamoDB: 'DynamoDB',
-    Cassandra: 'Cassandra',
-
-    RabbitMQ: 'RabbitMQ',
-    Kafka: 'Kafka',
-    SQS: 'SQS',
-    'Pub / Sub': 'Pub / Sub',
-    NATS: 'NATS',
-
-    Redis: 'Redis',
-    Memcached: 'Memcached',
-
-    Browser: 'Client',
-    'Mobile app': 'Mobile App',
-    CLI: 'CLI',
-
-    'Third-party API':
-      'External API',
-
-    SaaS: 'External SaaS',
-    Partner: 'Partner System',
-
-    Kong: 'Kong',
-    Envoy: 'Envoy',
-    Nginx: 'Nginx',
-
-    ALB: 'Load Balancer',
-    HAProxy: 'HAProxy',
-  }
-
-  const name =
-    technology &&
-      technologyNames[technology]
-      ? technologyNames[technology]
-      : typeNames[payload.type]
 
   architectureStore.execute({
     type: 'ADD_NODE',
@@ -121,12 +128,12 @@ function createComponent(payload: AddComponentPayload, position: { x: number, y:
     node: {
       id: crypto.randomUUID(),
       type: payload.type,
-      name,
+      name: getComponentName(payload),
       position,
 
       metadata: {
         technology:
-          technology?.toLowerCase(),
+          technology,
       },
 
       behavior: {},
@@ -192,6 +199,7 @@ function handlePaneClick(event: MouseEvent) {
     )
 
     pendingComponent.value = null
+    placementPosition.value = null
 
     return
   }
@@ -200,11 +208,16 @@ function handlePaneClick(event: MouseEvent) {
     return
   }
 
-  const position =
+  const pointerPosition =
     screenToFlowCoordinate({
       x: event.clientX,
-      y: event.clientY
+      y: event.clientY,
     })
+
+  const position = {
+    x: pointerPosition.x - 102,
+    y: pointerPosition.y - 44,
+  }
 
   const id = crypto.randomUUID()
 
@@ -368,11 +381,50 @@ const nodes = computed<Node[]>(() => {
 
   const draftRegionNodes: Node[] = []
 
+  const placementNodes: Node[] = []
+
+  if (
+    pendingComponent.value &&
+    placementPosition.value
+  ) {
+    const component =
+      pendingComponent.value
+
+    placementNodes.push({
+      id: '__component-placement__',
+
+      type: 'architecture',
+
+      position:
+        placementPosition.value,
+
+      draggable: false,
+      selectable: false,
+      connectable: false,
+
+      zIndex: 50,
+
+      data: {
+        label:
+          getComponentName(component),
+
+        nodeType:
+          component.type,
+
+        technology:
+          component.technology,
+
+        kind: 'placement-preview',
+      },
+
+      class:
+        'component-placement-preview',
+    })
+  }
+
   if (regionDraft.value) {
     const bounds =
-      getRegionBounds(
-        regionDraft.value,
-      )
+      getRegionBounds(regionDraft.value)
 
     draftRegionNodes.push({
       id: '__region-draft__',
@@ -381,21 +433,14 @@ const nodes = computed<Node[]>(() => {
         x: bounds.x,
         y: bounds.y,
       },
-
       type: 'region',
-
       draggable: false,
       selectable: false,
       connectable: false,
-
       zIndex: -9,
-
       style: {
-        width:
-          `${bounds.width}px`,
-
-        height:
-          `${bounds.height}px`,
+        width: `${bounds.width}px`,
+        height: `${bounds.height}px`,
       },
 
       data: {
@@ -411,6 +456,7 @@ const nodes = computed<Node[]>(() => {
     ...draftRegionNodes,
     ...architectureNodes,
     ...annotationNodes,
+    ...placementNodes,
   ]
 })
 
@@ -573,9 +619,14 @@ function handleConnect(connection: Connection) {
 function handleAnnotationTool() {
   annotationToolActive.value = !annotationToolActive.value
 
+  regionToolActive.value = false
+
+  pendingComponent.value = null
+  placementPosition.value = null
+
   selectedNodeId.value = null
   selectedEdgeId.value = null
-  regionToolActive.value = false
+  selectedRegionId.value = null
 }
 
 function getRegionBounds(draft: RegionDraft) {
@@ -612,8 +663,12 @@ function handleRegionTool() {
 
   annotationToolActive.value = false
 
+  pendingComponent.value = null
+  placementPosition.value = null
+
   selectedNodeId.value = null
   selectedEdgeId.value = null
+  selectedRegionId.value = null
 }
 
 function handleRegionDrawStart(event: MouseEvent) {
@@ -760,10 +815,22 @@ function handleRegionMouseUp() {
 
   toolRail.value?.deactivateRegion()
 }
+
+function handleCanvasMouseMove(event: MouseEvent) {
+  if (!pendingComponent.value) {
+    return
+  }
+
+  placementPosition.value =
+    screenToFlowCoordinate({
+      x: event.clientX,
+      y: event.clientY,
+    })
+}
 </script>
 
 <template>
-  <div class="architecture-canvas">
+  <div class="architecture-canvas" @mousemove="handleCanvasMouseMove">
     <VueFlow :nodes="nodes" :edges="edges" :fit-view-on-init="true" @node-drag-stop="handleNodeDragStop"
       @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick"
       @node-double-click="handleNodeDoubleClick" :class="{ 'component-placement': pendingComponent !== null }">
@@ -816,5 +883,14 @@ function handleRegionMouseUp() {
   z-index: 10;
   cursor: crosshair;
   background: transparent;
+}
+
+:deep(.component-placement .vue-flow__pane) {
+  cursor: crosshair;
+}
+
+:deep(.component-placement-preview) {
+  opacity: 0.55;
+  pointer-events: none;
 }
 </style>
