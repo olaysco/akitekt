@@ -1,16 +1,42 @@
 <script setup lang="ts">
+import { NodeResizer } from '@vue-flow/node-resizer'
+
 type Props = {
+    selected?: boolean
+
     data: {
         label: string
         draft?: boolean
     }
 }
 
+const emit = defineEmits<{
+  (e: 'resizeEnd', payload: { width: number; height: number }): void
+}>()
+
+function handleResizeEnd(event: {
+  params: {
+    width: number
+    height: number
+  }
+}) {
+  emit('resizeEnd', {
+    width: event.params.width,
+    height: event.params.height,
+  })
+}
+
 defineProps<Props>()
 </script>
 
 <template>
-    <div class="canvas-region" :class="{ draft: data.draft }">
+    <div class="canvas-region" :class="{ draft: data.draft, selected}">
+        <NodeResizer
+            v-if="selected && !data.draft"
+            :min-width="120"
+            :min-height="80"
+            @resize-end="handleResizeEnd"
+        />
         <div class="region-label">
             {{ data.label }}
         </div>
@@ -25,13 +51,15 @@ defineProps<Props>()
     background: oklch(0.975 0.006 258 / 0.5);
     border: 1px solid oklch(0.83 0.012 258);
     border-radius: 10px;
-    pointer-events: none;
 }
 
 .canvas-region.draft {
     background: oklch(0.96 0.025 258 / 0.32);
-
     border: 1px dashed oklch(0.60 0.19 258);
+}
+
+.canvas-region.selected {
+  border-color: oklch(0.60 0.19 258);
 }
 
 .region-label {

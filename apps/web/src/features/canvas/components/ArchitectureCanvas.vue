@@ -13,6 +13,7 @@ import { Controls } from '@vue-flow/controls'
 import CanvasRegion from './CanvasRegion.vue'
 import EdgeInspector from './EdgeInspector.vue'
 import NodeInspector from './NodeInspector.vue'
+import RegionInspector from './RegionInspector.vue'
 import CanvasAnnotation from './CanvasAnnotation.vue'
 import ArchitectureNode from '../nodes/ArchitectureNode.vue'
 import type { NodeType } from '../../architectures/domain/node'
@@ -204,6 +205,28 @@ function handlePaneClick(event: MouseEvent) {
   annotationToolActive.value = false
 
   toolRail.value?.deactivateAnnotation()
+}
+
+function resizeRegion(regionId: string | undefined,
+  size: {
+    width: number
+    height: number
+  },
+) {
+  if (!regionId) {
+    return
+  }
+
+  architectureStore.execute({
+    type: 'RESIZE_REGION',
+
+    regionId,
+
+    size: {
+      width: size.width,
+      height: size.height,
+    },
+  })
 }
 
 function updateAnnotation(annotationId: string, text: string,) {
@@ -688,7 +711,14 @@ function handleRegionMouseUp() {
       </template>
 
       <template #node-region="nodeProps">
-        <CanvasRegion :data="nodeProps.data" />
+        <CanvasRegion :data="nodeProps.data" :selected="selectedRegionId ===
+          nodeProps.data.regionId
+          " @resize-end="
+            resizeRegion(
+              nodeProps.data.regionId,
+              $event,
+            )
+            " />
       </template>
 
       <Background />
@@ -699,7 +729,7 @@ function handleRegionMouseUp() {
 
     <CanvasToolRail ref="toolRail" @add-component="addComponent" @annotation-tool="handleAnnotationTool"
       @region-tool="handleRegionTool" />
-    <!-- <NodePalette @add="addNode" /> -->
+    <RegionInspector :region-id="selectedRegionId" />
     <EdgeInspector :edge-id="selectedEdgeId" />
     <NodeInspector :node-id="selectedNodeId" />
   </div>
