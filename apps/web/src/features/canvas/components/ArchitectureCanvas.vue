@@ -16,9 +16,10 @@ import NodeInspector from './NodeInspector.vue'
 import RegionInspector from './RegionInspector.vue'
 import CanvasAnnotation from './CanvasAnnotation.vue'
 import ArchitectureNode from '../nodes/ArchitectureNode.vue'
-import type { NodeType } from '../../architectures/domain/node'
+import type { DocumentOperation } from '../../architectures/domain/operation'
 import CanvasToolRail, { type AddComponentPayload, } from './CanvasToolRail.vue'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
+import type { NodeType, Position, ArchitectureNode as DomainArchitectureNode, } from '../../architectures/domain/node'
 
 const architectureStore = useArchitectureStore()
 const selectedEdgeId = ref<string | null>(null)
@@ -455,6 +456,8 @@ const edges = computed<Edge[]>(() =>
 
 function handleNodeDragStop(event: { node: Node }) {
   const kind = event.node.data?.kind
+
+  // Annotation
   if (kind === 'annotation') {
     architectureStore.execute({
       type: 'UPDATE_ANNOTATION',
@@ -472,16 +475,19 @@ function handleNodeDragStop(event: { node: Node }) {
   }
 
   if (kind === 'region') {
-    const regionId = event.node.data?.regionId
+    const regionId =
+      event.node.data?.regionId
 
     if (!regionId) {
       return
     }
 
-    const region = architectureStore.architecture.regions.find(
-      (item) =>
-        item.id === regionId,
-    )
+    const region =
+      architectureStore.architecture
+        .regions.find(
+          (item) =>
+            item.id === regionId,
+        )
 
     if (!region) {
       return
@@ -492,11 +498,17 @@ function handleNodeDragStop(event: { node: Node }) {
       y: event.node.position.y,
     }
 
-    const deltaX = nextPosition.x - region.position.x
+    const deltaX =
+      nextPosition.x -
+      region.position.x
 
-    const deltaY = nextPosition.y - region.position.y
+    const deltaY =
+      nextPosition.y -
+      region.position.y
 
-    if (deltaX === 0 && deltaY === 0
+    if (
+      deltaX === 0 &&
+      deltaY === 0
     ) {
       return
     }
@@ -510,6 +522,7 @@ function handleNodeDragStop(event: { node: Node }) {
 
     architectureStore.execute({
       type: 'COMPOSITE',
+
       operations: [
         {
           type: 'MOVE_REGION',
@@ -521,9 +534,15 @@ function handleNodeDragStop(event: { node: Node }) {
           (node) => ({
             type: 'MOVE_NODE' as const,
             nodeId: node.id,
+
             position: {
-              x: node.position.x + deltaX,
-              y: node.position.y + deltaY,
+              x:
+                node.position.x +
+                deltaX,
+
+              y:
+                node.position.y +
+                deltaY,
             },
           }),
         ),
@@ -533,18 +552,61 @@ function handleNodeDragStop(event: { node: Node }) {
     return
   }
 
-  if (event.node.data?.kind !== 'architecture') {
+  // Architecture component
+  if (kind !== 'architecture') {
     return
   }
 
-  architectureStore.execute({
-    type: 'MOVE_NODE',
-    nodeId: event.node.id,
+  const architectureNode =
+    architectureStore.architecture
+      .nodes.find(
+        (node) =>
+          node.id === event.node.id,
+      )
 
-    position: {
-      x: event.node.position.x,
-      y: event.node.position.y,
+  if (!architectureNode) {
+    return
+  }
+
+  const nextPosition = {
+    x: event.node.position.x,
+    y: event.node.position.y,
+  }
+
+  const nextRegionId =
+    findRegionForNode(
+      architectureNode,
+      nextPosition,
+    )
+
+  const operations: DocumentOperation[] = [
+    {
+      type: 'MOVE_NODE',
+
+      nodeId: event.node.id,
+
+      position: nextPosition,
     },
+  ]
+
+  if (
+    architectureNode.regionId !==
+    nextRegionId
+  ) {
+    operations.push({
+      type: 'UPDATE_NODE',
+
+      nodeId: event.node.id,
+
+      changes: {
+        regionId: nextRegionId,
+      },
+    })
+  }
+
+  architectureStore.execute({
+    type: 'COMPOSITE',
+    operations,
   })
 }
 
@@ -827,6 +889,35 @@ function handleComponentMouseDown(event: MouseEvent) {
   pendingComponent.value = null
   placementPosition.value = null
 }
+
+function findRegionForNode(node: DomainArchitectureNode, position: Position): string | undefined {
+  const width =
+    node.size?.width ?? 204
+
+  const height =
+    node.size?.height ?? 88
+
+  const centerX =
+    position.x + width / 2
+
+  const centerY =
+    position.y + height / 2
+
+  const region =
+    architectureStore.architecture
+      .regions.find((region) => (
+        centerX >= region.position.x &&
+        centerX <=
+        region.position.x +
+        region.size.width &&
+        centerY >= region.position.y &&
+        centerY <=
+        region.position.y +
+        region.size.height
+      ))
+
+  return region?.id
+}
 </script>
 
 <template>
@@ -896,6 +987,7 @@ function handleComponentMouseDown(event: MouseEvent) {
   opacity: 0.55;
   pointer-events: none;
 }
+
 .component-placement-layer {
   position: absolute;
   inset: 0;
