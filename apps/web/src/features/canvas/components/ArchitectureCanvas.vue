@@ -990,14 +990,53 @@ function deleteSelectedNodes() {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+  const isModifier = event.metaKey || event.ctrlKey
+  const target = event.target as HTMLElement | null
+
+  const isEditing =
+    target?.tagName === 'INPUT' ||
+    target?.tagName === 'TEXTAREA' ||
+    target?.isContentEditable
+
   if (
-    event.key !== 'Delete' &&
-    event.key !== 'Backspace'
+    isModifier &&
+    event.key.toLowerCase() === 'z' &&
+    !isEditing
   ) {
+    event.preventDefault()
+
+    if (event.shiftKey) {
+      architectureStore.redo()
+    } else {
+      architectureStore.undo()
+    }
+
     return
   }
 
-  const target = event.target as HTMLElement | null
+  if (isModifier && event.key.toLowerCase() === 'd') {
+
+    if (
+      target?.tagName === 'INPUT' ||
+      target?.tagName === 'TEXTAREA' ||
+      target?.isContentEditable
+    ) {
+      return
+    }
+
+    if (selectedNodeIds.value.length === 0) {
+      return
+    }
+
+    event.preventDefault()
+    duplicateSelectedNodes()
+    return
+  }
+
+  if (event.key !== 'Delete' && event.key !== 'Backspace'
+  ) {
+    return
+  }
 
   if (
     target?.tagName === 'INPUT' ||
@@ -1012,8 +1051,72 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 
   event.preventDefault()
-
   deleteSelectedNodes()
+}
+
+function duplicateSelectedNodes() {
+  if (selectedNodeIds.value.length === 0) {
+    return
+  }
+
+  const sourceNodes = architectureStore.architecture.nodes.filter(
+    (node) => selectedNodeIds.value.includes(node.id),
+  )
+
+  const idMap = new Map<string, string>()
+  const offset = 32
+
+  const addNodeOperations: DocumentOperation[] = sourceNodes.map((node) => {
+    const newId = crypto.randomUUID()
+
+    idMap.set(node.id, newId)
+
+    return {
+      type: 'ADD_NODE',
+      node: {
+        ...node,
+        id: newId,
+        position: {
+          x: node.position.x + offset,
+          y: node.position.y + offset,
+        },
+      },
+    }
+  })
+
+  const internalEdges = architectureStore.architecture.edges.filter(
+    (edge) =>
+      idMap.has(edge.source.nodeId) &&
+      idMap.has(edge.target.nodeId),
+  )
+
+  const addEdgeOperations: DocumentOperation[] = internalEdges.map((edge) => ({
+    type: 'ADD_EDGE',
+    edge: {
+      ...edge,
+      id: crypto.randomUUID(),
+      source: {
+        ...edge.source,
+        nodeId: idMap.get(edge.source.nodeId)!,
+      },
+      target: {
+        ...edge.target,
+        nodeId: idMap.get(edge.target.nodeId)!,
+      },
+    },
+  }))
+
+  architectureStore.execute({
+    type: 'COMPOSITE',
+    operations: [
+      ...addNodeOperations,
+      ...addEdgeOperations,
+    ],
+  })
+
+  selectedNodeIds.value = Array.from(idMap.values())
+
+  selectedNodeId.value = selectedNodeIds.value.length === 1 ? selectedNodeIds.value[0] : null
 }
 
 onMounted(() => {
