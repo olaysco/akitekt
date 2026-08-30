@@ -119,9 +119,6 @@ function selectComponent(payload: AddComponentPayload) {
 
 function createComponent(payload: AddComponentPayload, position: { x: number, y: number }) {
 
-  const technology =
-    payload.technology
-
   architectureStore.execute({
     type: 'ADD_NODE',
 
@@ -132,8 +129,7 @@ function createComponent(payload: AddComponentPayload, position: { x: number, y:
       position,
 
       metadata: {
-        technology:
-          technology,
+        technology: payload.technology,
       },
 
       behavior: {},
@@ -373,11 +369,12 @@ const nodes = computed<Node[]>(() => {
 
     placementNodes.push({
       id: '__component-placement__',
-
       type: 'architecture',
 
-      position:
-        placementPosition.value,
+      position: {
+        x: placementPosition.value.x - 102,
+        y: placementPosition.value.y - 44,
+      },
 
       draggable: false,
       selectable: false,
@@ -808,16 +805,8 @@ function handleCanvasMouseMove(event: MouseEvent) {
       y: event.clientY,
     })
 }
-function handleComponentMouseDown( event: MouseEvent,) {
+function handleComponentMouseDown(event: MouseEvent) {
   if (!pendingComponent.value) {
-    return
-  }
-
-  const target = event.target as HTMLElement
-  if (
-    target.closest('.canvas-tool-rail') ||
-    target.closest('.inspector')
-  ) {
     return
   }
 
@@ -837,14 +826,11 @@ function handleComponentMouseDown( event: MouseEvent,) {
 
   pendingComponent.value = null
   placementPosition.value = null
-
-  event.preventDefault()
-  event.stopPropagation()
 }
 </script>
 
 <template>
-  <div class="architecture-canvas" @mousedown="handleComponentMouseDown" @mousemove="handleCanvasMouseMove">
+  <div class="architecture-canvas">
     <VueFlow :nodes="nodes" :edges="edges" :fit-view-on-init="true" @node-drag-stop="handleNodeDragStop"
       @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick"
       @node-double-click="handleNodeDoubleClick" :class="{ 'component-placement': pendingComponent !== null }">
@@ -871,6 +857,9 @@ function handleComponentMouseDown( event: MouseEvent,) {
       <Background />
       <Controls />
     </VueFlow>
+
+    <div v-if="pendingComponent" class="component-placement-layer" @mousemove="handleCanvasMouseMove"
+      @mousedown.stop.prevent="handleComponentMouseDown" />
 
     <div v-if="regionToolActive" class="region-draw-layer" @mousedown.stop.prevent="handleRegionDrawStart" />
 
@@ -906,5 +895,12 @@ function handleComponentMouseDown( event: MouseEvent,) {
 :deep(.component-placement-preview) {
   opacity: 0.55;
   pointer-events: none;
+}
+.component-placement-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  cursor: crosshair;
+  background: transparent;
 }
 </style>
