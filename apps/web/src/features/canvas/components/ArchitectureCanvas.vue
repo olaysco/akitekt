@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import {
   VueFlow,
   type Node,
   type Edge,
   type Connection,
   useVueFlow,
+  type NodeMouseEvent,
 } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
+
 
 import CanvasRegion from './CanvasRegion.vue'
 import EdgeInspector from './EdgeInspector.vue'
@@ -24,6 +26,7 @@ import type { NodeType, Position, ArchitectureNode as DomainArchitectureNode, } 
 const architectureStore = useArchitectureStore()
 const selectedEdgeId = ref<string | null>(null)
 const selectedNodeId = ref<string | null>(null)
+const selectedNodeIds = ref<string[]>([])
 const selectedRegionId = ref<string | null>(null)
 const pendingComponent = ref<AddComponentPayload | null>(null)
 const placementPosition = ref<{ x: number; y: number } | null>(null)
@@ -114,6 +117,7 @@ function selectComponent(payload: AddComponentPayload) {
   toolRail.value?.deactivateRegion()
 
   selectedNodeId.value = null
+  selectedNodeIds.value = []
   selectedEdgeId.value = null
   selectedRegionId.value = null
 }
@@ -149,16 +153,36 @@ const editingAnnotationId = ref<string | null>(null)
 
 
 function handleNodeClick(
-  event: { node: Node },
+  event: NodeMouseEvent,
 ) {
   const kind = event.node.data?.kind
 
-  selectedNodeId.value = null
   selectedEdgeId.value = null
   selectedRegionId.value = null
 
   if (kind === 'architecture') {
-    selectedNodeId.value = event.node.id
+    const nodeId = event.node.id
+
+    const isShiftClick = 'shiftKey' in event.event &&
+      event.event.shiftKey
+
+    if (isShiftClick) {
+      if (
+        selectedNodeIds.value.includes(nodeId)
+      ) {
+        selectedNodeIds.value =
+          selectedNodeIds.value.filter(
+            (id) => id !== nodeId,
+          )
+      } else {
+        selectedNodeIds.value = [
+          ...selectedNodeIds.value,
+          nodeId,
+        ]
+      }
+    } else {
+      selectedNodeIds.value = [nodeId]
+    }
     return
   }
 
@@ -672,6 +696,7 @@ function handleAnnotationTool() {
   placementPosition.value = null
 
   selectedNodeId.value = null
+  selectedNodeIds.value = []
   selectedEdgeId.value = null
   selectedRegionId.value = null
 }
@@ -714,6 +739,7 @@ function handleRegionTool() {
   placementPosition.value = null
 
   selectedNodeId.value = null
+  selectedNodeIds.value = []
   selectedEdgeId.value = null
   selectedRegionId.value = null
 }
@@ -941,6 +967,62 @@ function resizeNode(
   })
 }
 
+function deleteSelectedNodes() {
+  if (selectedNodeIds.value.length === 0) {
+    return
+  }
+
+  const operations: DocumentOperation[] =
+    selectedNodeIds.value.map(
+      (nodeId) => ({
+        type: 'REMOVE_NODE',
+        nodeId,
+      }),
+    )
+
+  architectureStore.execute({
+    type: 'COMPOSITE',
+    operations,
+  })
+
+  selectedNodeIds.value = []
+  selectedNodeId.value = null
+}
+
+function handleKeyDown(event: KeyboardEvent) {
+  if (
+    event.key !== 'Delete' &&
+    event.key !== 'Backspace'
+  ) {
+    return
+  }
+
+  const target = event.target as HTMLElement | null
+
+  if (
+    target?.tagName === 'INPUT' ||
+    target?.tagName === 'TEXTAREA' ||
+    target?.isContentEditable
+  ) {
+    return
+  }
+
+  if (selectedNodeIds.value.length === 0) {
+    return
+  }
+
+  event.preventDefault()
+
+  deleteSelectedNodes()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <template>
@@ -949,7 +1031,7 @@ function resizeNode(
       @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick"
       @node-double-click="handleNodeDoubleClick" :class="{ 'component-placement': pendingComponent !== null }">
       <template #node-architecture="nodeProps">
-        <ArchitectureNode :data="nodeProps.data" :selected="selectedNodeId === nodeProps.id"
+        <ArchitectureNode :data="nodeProps.data" :selected="selectedNodeIds.includes(nodeProps.id)"
           @resize-end="resizeNode(nodeProps.id, $event)" />
       </template>
 
@@ -978,11 +1060,15 @@ function resizeNode(
 
     <div v-if="regionToolActive" class="region-draw-layer" @mousedown.stop.prevent="handleRegionDrawStart" />
 
+    <button class="temporary-delete" @click="deleteSelectedNodes">
+      Delete selected
+    </button>
     <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"
       @region-tool="handleRegionTool" />
     <RegionInspector :region-id="selectedRegionId" />
     <EdgeInspector :edge-id="selectedEdgeId" />
     <NodeInspector :node-id="selectedNodeId" />
+
   </div>
 </template>
 
