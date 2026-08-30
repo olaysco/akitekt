@@ -245,18 +245,24 @@ export function invertOperation(
         }
 
         case 'RESIZE_NODE': {
-            const node = architectureBefore.nodes.find(
-                (item) => item.id === operation.nodeId,
-            )
+            const node =
+                architectureBefore.nodes.find(
+                    (node) =>
+                        node.id === operation.nodeId,
+                )
 
-            if (!node || !node.size) {
-                throw new Error(`Cannot invert RESIZE_NODE: node ${operation.nodeId} has no previous size`)
+            if (!node) {
+                throw new Error(
+                    `Cannot invert RESIZE_NODE: node "${operation.nodeId}" not found`,
+                )
             }
 
             return {
-                type: 'RESIZE_NODE',
+                type: 'UPDATE_NODE',
                 nodeId: operation.nodeId,
-                size: node.size,
+                changes: {
+                    size: node.size,
+                },
             }
         }
 

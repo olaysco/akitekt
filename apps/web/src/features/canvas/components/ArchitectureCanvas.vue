@@ -279,6 +279,13 @@ const nodes = computed<Node[]>(() => {
 
         position: node.position,
 
+        style: node.size
+          ? {
+            width: `${node.size.width}px`,
+            height: `${node.size.height}px`,
+          }
+          : undefined,
+
         data: {
           label: node.name,
           nodeType: node.type,
@@ -918,6 +925,22 @@ function findRegionForNode(node: DomainArchitectureNode, position: Position): st
 
   return region?.id
 }
+
+function resizeNode(
+  nodeId: string,
+  size: {
+    width: number
+    height: number
+  },
+) {
+
+  architectureStore.execute({
+    type: 'RESIZE_NODE',
+    nodeId,
+    size,
+  })
+}
+
 </script>
 
 <template>
@@ -926,7 +949,8 @@ function findRegionForNode(node: DomainArchitectureNode, position: Position): st
       @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick"
       @node-double-click="handleNodeDoubleClick" :class="{ 'component-placement': pendingComponent !== null }">
       <template #node-architecture="nodeProps">
-        <ArchitectureNode :data="nodeProps.data" :selected="selectedNodeId === nodeProps.id" />
+        <ArchitectureNode :data="nodeProps.data" :selected="selectedNodeId === nodeProps.id"
+          @resize-end="resizeNode(nodeProps.id, $event)" />
       </template>
 
       <template #node-annotation="nodeProps">

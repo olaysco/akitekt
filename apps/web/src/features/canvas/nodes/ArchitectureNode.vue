@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
+import { NodeResizer } from '@vue-flow/node-resizer'
 
 type NodePropertyValue =
     | string
@@ -87,6 +88,29 @@ const chips = computed(() => {
 
     return result.slice(0, 3)
 })
+
+const emit = defineEmits<{
+    resizeEnd: [
+        size: {
+            width: number
+            height: number
+        },
+    ]
+}>()
+
+function handleResizeEnd(
+  event: {
+    params: {
+      width: number
+      height: number
+    }
+  },
+) {
+  emit('resizeEnd', {
+    width: event.params.width,
+    height: event.params.height,
+  })
+}
 </script>
 
 <template>
@@ -94,6 +118,7 @@ const chips = computed(() => {
         selected,
         external: isExternal,
     }">
+        <NodeResizer v-if="selected" :min-width="160" :min-height="72" @resize-end="handleResizeEnd" />
         <Handle type="target" :position="Position.Left" class="node-handle" />
 
         <div class="node-main">
@@ -241,8 +266,10 @@ const chips = computed(() => {
 
 <style scoped>
 .architecture-node {
-    width: 204px;
-    min-height: 88px;
+    width: 100%;
+    height: 100%;
+    min-width: 160px;
+    min-height: 72px;
 
     position: relative;
 
