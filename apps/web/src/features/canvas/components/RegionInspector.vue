@@ -91,9 +91,9 @@ function removeRegion() {
 
     border: 1px solid oklch(0.875 0.009 258);
 
-    border-radius: 9px;
+    /* border-radius: 9px;
 
-    box-shadow: 0 8px 24px oklch(0.35 0.02 258 / 0.09);
+    box-shadow: 0 8px 24px oklch(0.35 0.02 258 / 0.09); */
 
     font-family: "IBM Plex Sans", system-ui, sans-serif;
 }

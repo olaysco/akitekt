@@ -16,6 +16,18 @@ const props = defineProps<Props>()
 
 const architectureStore = useArchitectureStore()
 
+const sourceNode = computed(() => architectureStore.architecture.nodes.find(
+    (node) =>
+      node.id === edge.value?.source.nodeId,
+  ),
+)
+
+const targetNode = computed(() => architectureStore.architecture.nodes.find(
+    (node) =>
+      node.id === edge.value?.target.nodeId,
+  ),
+)
+
 const edge = computed(() =>
     architectureStore.architecture.edges.find(
         (item) => item.id === props.edgeId,
@@ -90,11 +102,11 @@ function removeEdge() {
                     Connection
                 </div>
 
-                <strong>
-                    {{ edge.source.nodeId }}
+                <div class="connection-route">
+                    {{ sourceNode?.name ?? 'Unknown' }}
                     →
-                    {{ edge.target.nodeId }}
-                </strong>
+                    {{ targetNode?.name ?? 'Unknown' }}
+                </div>
             </div>
         </div>
 

@@ -218,13 +218,13 @@ function removeNode() {
 
     background: white;
     border: 1px solid #e4e7ec;
-    border-radius: 12px;
+    /* border-radius: 12px;
 
     box-shadow:
         0 4px 10px rgba(16, 24, 40, 0.06),
         0 12px 28px rgba(16, 24, 40, 0.08);
 
-    z-index: 20;
+    z-index: 20; */
 }
 
 .header {

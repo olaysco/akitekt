@@ -22,6 +22,8 @@ import type { DocumentOperation } from '../../architectures/domain/operation'
 import CanvasToolRail, { type AddComponentPayload, } from './CanvasToolRail.vue'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 import type { NodeType, Position, ArchitectureNode as DomainArchitectureNode, } from '../../architectures/domain/node'
+import WorkspaceSidePanel from './WorkspaceSidePanel.vue'
+import ContextualSidePanel from './ContextualSidePanel.vue'
 
 const architectureStore = useArchitectureStore()
 const selectedEdgeId = ref<string | null>(null)
@@ -93,6 +95,25 @@ const technologyNames: Record<string, string> = {
   ALB: 'Load Balancer',
   HAProxy: 'HAProxy',
 }
+
+const hasSingleNodeSelection = computed(() =>
+  selectedNodeIds.value.length === 1 &&
+  selectedNodeId.value !== null,
+)
+
+const hasMultiNodeSelection = computed(() => selectedNodeIds.value.length > 1,
+)
+
+const hasContextualSelection = computed(() =>
+  hasSingleNodeSelection.value ||
+  selectedEdgeId.value !== null ||
+  selectedRegionId.value !== null ||
+  hasMultiNodeSelection.value,
+)
+
+const hasNoSelection = computed(
+  () => !hasContextualSelection.value,
+)
 
 function getComponentName(
   payload: AddComponentPayload,
@@ -181,7 +202,21 @@ function handleNodeClick(
         ]
       }
     } else {
-      selectedNodeIds.value = [nodeId]
+      console.log('selectedNodeIds.value', selectedNodeIds.value)
+      if (
+        selectedNodeIds.value.length === 1 && selectedNodeIds.value[0] === nodeId
+      ) {
+        selectedNodeIds.value = []
+      } else {
+        selectedNodeIds.value = [nodeId]
+      }
+      console.log('selectedNodeIds.value', selectedNodeIds.value)
+    }
+
+    if (selectedNodeIds.value.length === 1) {
+      selectedNodeId.value = selectedNodeIds.value[0]
+    } else {
+      selectedNodeId.value = null
     }
     return
   }
@@ -205,6 +240,7 @@ function handlePaneClick(event: MouseEvent) {
   selectedNodeId.value = null
   selectedEdgeId.value = null
   selectedRegionId.value = null
+  selectedNodeIds.value = []
 
   if (!annotationToolActive.value) {
     return
@@ -998,11 +1034,7 @@ function handleKeyDown(event: KeyboardEvent) {
     target?.tagName === 'TEXTAREA' ||
     target?.isContentEditable
 
-  if (
-    isModifier &&
-    event.key.toLowerCase() === 'z' &&
-    !isEditing
-  ) {
+  if (isModifier && event.key.toLowerCase() === 'z' && !isEditing) {
     event.preventDefault()
 
     if (event.shiftKey) {
@@ -1010,6 +1042,24 @@ function handleKeyDown(event: KeyboardEvent) {
     } else {
       architectureStore.undo()
     }
+
+    return
+  }
+
+  if (event.key === 'Escape') {
+    selectedNodeIds.value = []
+    selectedNodeId.value = null
+    selectedEdgeId.value = null
+    selectedRegionId.value = null
+
+    pendingComponent.value = null
+    placementPosition.value = null
+
+    annotationToolActive.value = false
+    regionToolActive.value = false
+
+    toolRail.value?.deactivateAnnotation()
+    toolRail.value?.deactivateRegion()
 
     return
   }
@@ -1158,19 +1208,18 @@ onBeforeUnmount(() => {
       <Controls />
     </VueFlow>
 
-    <div v-if="pendingComponent" class="component-placement-layer" @mousemove="handleCanvasMouseMove"
-      @mousedown.stop.prevent="handleComponentMouseDown" />
+    <div v-if="pendingComponent" class="component-placement-layer" @mousemove="handleCanvasMouseMove" @mousedown.stop.prevent="handleComponentMouseDown" />
 
     <div v-if="regionToolActive" class="region-draw-layer" @mousedown.stop.prevent="handleRegionDrawStart" />
 
-    <button class="temporary-delete" @click="deleteSelectedNodes">
-      Delete selected
-    </button>
-    <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"
-      @region-tool="handleRegionTool" />
-    <RegionInspector :region-id="selectedRegionId" />
-    <EdgeInspector :edge-id="selectedEdgeId" />
-    <NodeInspector :node-id="selectedNodeId" />
+    <button class="temporary-delete" @click="deleteSelectedNodes"> Delete selected </button>
+
+    <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"  @region-tool="handleRegionTool" />
+
+    <ContextualSidePanel v-if="hasContextualSelection" :selected-node-id="selectedNodeId"
+      :selected-node-ids="selectedNodeIds" :selected-edge-id="selectedEdgeId" :selected-region-id="selectedRegionId" />
+
+    <WorkspaceSidePanel v-else />
 
   </div>
 </template>
@@ -1207,5 +1256,15 @@ onBeforeUnmount(() => {
   z-index: 10;
   cursor: crosshair;
   background: transparent;
+}
+
+.selection-title {
+  font-weight: 600;
+}
+
+.selection-hint {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #6b7280;
 }
 </style>
