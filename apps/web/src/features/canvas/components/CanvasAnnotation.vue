@@ -74,7 +74,22 @@ onMounted(async () => {
 
 <style scoped>
 .canvas-annotation {
-    width: 220px;
+    width: 270px;
+
+    padding: 10px 12px;
+
+    background:
+        oklch(1 0 0);
+
+    border:
+        1px solid oklch(0.885 0.02 258);
+
+    border-radius:
+        9px;
+
+    box-shadow:
+        0 2px 4px oklch(0.55 0.03 258 / 0.10),
+        0 16px 34px -20px oklch(0.50 0.05 258 / 0.34);
 
     font-family:
         "IBM Plex Sans",
@@ -82,52 +97,70 @@ onMounted(async () => {
         sans-serif;
 }
 
+.annotation-text {
+    color:
+        oklch(0.34 0.014 258);
+
+    font-size:
+        11px;
+
+    line-height:
+        1.5;
+
+    white-space:
+        pre-wrap;
+
+    word-break:
+        break-word;
+}
+
 textarea {
-    width: 100%;
-    min-height: 48px;
+    width:
+        100%;
 
-    display: block;
+    min-height:
+        42px;
 
-    resize: none;
+    display:
+        block;
 
-    padding: 7px 8px;
+    resize:
+        none;
+
+    padding:
+        0;
 
     background:
         transparent;
 
     border:
-        1px solid transparent;
-
-    border-radius: 6px;
+        0;
 
     color:
         oklch(0.34 0.014 258);
 
-    font: inherit;
-    font-size: 12px;
-    line-height: 1.5;
+    font:
+        inherit;
 
-    outline: none;
+    font-size:
+        11px;
 
-    overflow: hidden;
+    line-height:
+        1.5;
+
+    outline:
+        none;
+
+    overflow:
+        hidden;
 }
 
-textarea:hover {
-    background:
-        oklch(0.99 0.003 258 / 0.72);
-
-    border-color:
-        oklch(0.90 0.008 258);
-}
-
-textarea:focus {
-    background:
-        oklch(0.99 0.003 258);
-
+.canvas-annotation:has(textarea) {
     border-color:
         oklch(0.60 0.19 258);
 
     box-shadow:
-        0 0 0 2px oklch(0.60 0.19 258 / 0.11);
+        0 0 0 2px oklch(0.60 0.19 258 / 0.11),
+        0 16px 34px -20px oklch(0.50 0.05 258 / 0.34);
 }
 </style>

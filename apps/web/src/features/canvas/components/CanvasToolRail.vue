@@ -24,40 +24,6 @@ const componentsOpen = ref(false)
 const annotationActive = ref(false)
 const selectedRole = ref<ComponentRole | null>(null)
 
-function toggleAnnotation() {
-  annotationActive.value =
-    !annotationActive.value
-
-  regionActive.value = false
-  componentsOpen.value = false
-  selectedRole.value = null
-
-  emit('annotationTool')
-}
-
-function deactivateAnnotation() {
-  annotationActive.value = false
-}
-
-function toggleRegion() {
-  regionActive.value = !regionActive.value
-
-  annotationActive.value = false
-  componentsOpen.value = false
-  selectedRole.value = null
-
-  emit('regionTool')
-}
-
-function deactivateRegion() {
-  regionActive.value = false
-}
-
-defineExpose({
-deactivateRegion,
-  deactivateAnnotation,
-})
-
 const roles: ComponentRole[] = [
     {
         type: 'service',
@@ -113,17 +79,47 @@ const roles: ComponentRole[] = [
 ]
 
 function toggleComponents() {
-  componentsOpen.value = !componentsOpen.value
+    componentsOpen.value = !componentsOpen.value
 
-  annotationActive.value = false
-  regionActive.value = false
+    annotationActive.value = false
+    regionActive.value = false
 
-  if (!componentsOpen.value) {
-    selectedRole.value = null
-  }
+    if (!componentsOpen.value) {
+        selectedRole.value = null
+    }
 }
 
-function selectRole(role: ComponentRole) {
+function toggleAnnotation() {
+    annotationActive.value = !annotationActive.value
+
+    regionActive.value = false
+    componentsOpen.value = false
+    selectedRole.value = null
+
+    emit('annotationTool')
+}
+
+function deactivateAnnotation() {
+    annotationActive.value = false
+}
+
+function toggleRegion() {
+    regionActive.value = !regionActive.value
+
+    annotationActive.value = false
+    componentsOpen.value = false
+    selectedRole.value = null
+
+    emit('regionTool')
+}
+
+function deactivateRegion() {
+    regionActive.value = false
+}
+
+function selectRole(
+    role: ComponentRole,
+) {
     selectedRole.value = role
 }
 
@@ -139,90 +135,93 @@ function addComponent(role: ComponentRole, technology: string) {
     componentsOpen.value = false
     selectedRole.value = null
 }
+
+defineExpose({
+    deactivateRegion,
+    deactivateAnnotation,
+})
 </script>
 
 <template>
     <div class="tool-system">
-        <div class="tool-rail">
+        <aside class="canvas-tool-rail">
             <button class="tool-button" :class="{ active: componentsOpen }" title="Components"
-                @click.stop="toggleComponents">
-                <span class="tool-symbol">＋</span>
-                <span class="tool-tooltip">Components</span>
+                @click="toggleComponents">
+                ＋
             </button>
 
-            <button class="tool-button" :class="{ active: annotationActive }" title="Annotation" @click.stop="toggleAnnotation" >
-                <span class="tool-symbol text-symbol">T</span>
-                <span class="tool-tooltip">Annotation</span>
+            <button class="tool-button annotation-button" :class="{ active: annotationActive }" title="Annotation"
+                @click="toggleAnnotation">
+                T
             </button>
 
-            <button class="tool-button" title="Region" :class="{ active: regionActive }" @click.stop="toggleRegion">
-                <span class="tool-symbol region-symbol">□</span>
-                <span class="tool-tooltip">Region</span>
+            <button class="tool-button" :class="{ active: regionActive }" title="Region" @click="toggleRegion">
+                □
             </button>
-        </div>
+        </aside>
 
         <div v-if="componentsOpen" class="component-flyout" @click.stop>
+            <div class="flyout-header">
+                <span>Add component</span>
+            </div>
+
             <div class="role-list">
-                <div class="flyout-heading">
-                    Components
-                </div>
+                <div v-for="role in roles" :key="role.type" class="role-group">
+                    <button class="role-row" :class="{
+                        selected:
+                            selectedRole?.type === role.type,
+                    }" @click="selectRole(role)">
+                        <span class="role-glyph">
+                            <span v-if="role.type === 'database'" class="glyph-database" />
 
-                <button v-for="role in roles" :key="role.type" class="role-row" :class="{
-                    selected:
-                        selectedRole?.type === role.type,
-                }" @click="selectRole(role)">
-                    <span class="role-glyph" :class="`role-${role.type}`">
-                        <span v-if="role.type === 'database'" class="glyph-database" />
+                            <span v-else-if="role.type === 'queue'" class="glyph-queue">
+                                <i />
+                                <i />
+                                <i />
+                            </span>
 
-                        <span v-else-if="role.type === 'queue'" class="glyph-queue">
-                            <i />
-                            <i />
-                            <i />
+                            <span v-else-if="
+                                role.type === 'worker' ||
+                                role.type === 'client'
+                            " class="glyph-ring" />
+
+                            <span v-else-if="role.type === 'external'" class="glyph-external" />
+
+                            <span v-else-if="
+                                role.type === 'cache' ||
+                                role.type === 'gateway' ||
+                                role.type === 'load-balancer'
+                            " class="glyph-diamond" />
+
+                            <span v-else class="glyph-box" />
                         </span>
 
-                        <span v-else-if="
-                            role.type === 'worker' ||
-                            role.type === 'client'
-                        " class="glyph-ring" />
+                        <span class="role-label">
+                            {{ role.label }}
+                        </span>
 
-                        <span v-else-if="role.type === 'external'" class="glyph-external" />
+                        <span class="role-chevron">
+                            {{
+                                selectedRole?.type === role.type
+                                    ? '−'
+                                    : '›'
+                            }}
+                        </span>
+                    </button>
 
-                        <span v-else-if="
-                            role.type === 'cache' ||
-                            role.type === 'gateway' ||
-                            role.type === 'load-balancer'
-                        " class="glyph-diamond" />
-
-                        <span v-else class="glyph-box" />
-                    </span>
-
-                    <span class="role-label">
-                        {{ role.label }}
-                    </span>
-
-                    <span class="role-chevron">
-                        ›
-                    </span>
-                </button>
-            </div>
-
-            <div v-if="selectedRole" class="technology-list">
-                <div class="flyout-heading">
-                    {{ selectedRole.label }}
+                    <div v-if="
+                        selectedRole?.type === role.type
+                    " class="technology-list">
+                        <button v-for="technology in role.technologies" :key="technology" class="technology-row" @click="
+                            addComponent(
+                                role,
+                                technology,
+                            )
+                            ">
+                            {{ technology }}
+                        </button>
+                    </div>
                 </div>
-
-                <button v-for="technology in selectedRole.technologies" :key="technology" class="technology-row" @click="
-                    addComponent(
-                        selectedRole,
-                        technology,
-                    )
-                    ">
-                    {{ technology }}
-                </button>
-            </div>
-
-            <div v-else class="technology-empty">
-                Select a component type
             </div>
         </div>
     </div>
@@ -231,41 +230,38 @@ function addComponent(role: ComponentRole, technology: string) {
 <style scoped>
 .tool-system {
     position: absolute;
-    left: 16px;
-    top: 18px;
-    z-index: 20;
+    left: 14px;
+    top: 64px;
+    z-index: 30;
 
     font-family:
-        "IBM Plex Sans",
+        'IBM Plex Sans',
         system-ui,
         sans-serif;
 }
 
-.tool-rail {
-    width: 42px;
-
+.canvas-tool-rail {
     display: flex;
     flex-direction: column;
+    gap: 3px;
 
-    padding: 4px;
+    padding: 5px;
 
-    background:
-        oklch(0.99 0.003 258);
+    background: oklch(1 0 0);
 
     border:
-        1px solid oklch(0.875 0.009 258);
+        1px solid oklch(0.895 0.008 258);
 
-    border-radius: 9px;
+    border-radius: 12px;
 
     box-shadow:
-        0 3px 12px oklch(0.35 0.02 258 / 0.08);
+        0 2px 6px oklch(0.55 0.03 258 / 0.10),
+        0 14px 30px -20px oklch(0.50 0.05 258 / 0.30);
 }
 
 .tool-button {
-    position: relative;
-
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
 
     display: flex;
     align-items: center;
@@ -273,185 +269,140 @@ function addComponent(role: ComponentRole, technology: string) {
 
     padding: 0;
 
+    border: 0;
+    border-radius: 8px;
+
     background: transparent;
 
-    border: 0;
-    border-radius: 6px;
-
     color:
-        oklch(0.43 0.014 258);
+        oklch(0.46 0.014 258);
+
+    font-family: inherit;
+    font-size: 14px;
 
     cursor: pointer;
 }
 
-.tool-button:hover,
+.tool-button.annotation-button {
+    font-size: 12px;
+}
+
+.tool-button:hover {
+    background:
+        oklch(0.962 0.012 258);
+}
+
 .tool-button.active {
     background:
-        oklch(0.95 0.025 258);
+        oklch(0.94 0.04 258);
 
     color:
         oklch(0.44 0.19 258);
-}
-
-.tool-button:disabled {
-    cursor: default;
-    opacity: 0.48;
-}
-
-.tool-symbol {
-    font-size: 17px;
-    font-weight: 400;
-    line-height: 1;
-}
-
-.text-symbol {
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.region-symbol {
-    font-size: 17px;
-}
-
-.tool-tooltip {
-    position: absolute;
-    left: 42px;
-
-    padding: 4px 7px;
-
-    background:
-        oklch(0.28 0.014 258);
-
-    border-radius: 5px;
-
-    color: white;
-
-    font-size: 10px;
-
-    opacity: 0;
-    pointer-events: none;
-
-    white-space: nowrap;
-
-    transform: translateX(-3px);
-
-    transition:
-        opacity 100ms ease,
-        transform 100ms ease;
-}
-
-.tool-button:hover .tool-tooltip {
-    opacity: 1;
-    transform: translateX(0);
 }
 
 .component-flyout {
     position: absolute;
-    left: 50px;
+
+    left: 58px;
     top: 0;
 
-    display: flex;
+    width: 262px;
+    max-height:
+        calc(100vh - 100px);
 
-    min-height: 310px;
+    overflow-y: auto;
 
     background:
-        oklch(0.995 0.002 258);
+        oklch(1 0 0);
 
     border:
-        1px solid oklch(0.875 0.009 258);
+        1px solid oklch(0.895 0.008 258);
 
-    border-radius: 9px;
+    border-radius: 12px;
 
     box-shadow:
-        0 8px 24px oklch(0.35 0.02 258 / 0.11);
+        0 2px 6px oklch(0.55 0.03 258 / 0.10),
+        0 18px 36px -22px oklch(0.50 0.05 258 / 0.34);
 
-    overflow: hidden;
+    animation:
+        pop 0.13s ease-out;
+}
+
+.flyout-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding:
+        11px 13px 9px;
+
+    border-bottom:
+        1px solid oklch(0.93 0.006 258);
+
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+
+    color:
+        oklch(0.56 0.014 258);
 }
 
 .role-list {
-    width: 188px;
-
-    padding: 7px;
-
-    border-right:
-        1px solid oklch(0.905 0.007 258);
-}
-
-.technology-list {
-    width: 175px;
-
     padding: 7px;
 }
 
-.flyout-heading {
-    padding: 6px 7px 8px;
-
-    color:
-        oklch(0.60 0.014 258);
-
-    font-size: 9px;
-    font-weight: 500;
-
-    letter-spacing: 0.1em;
-
-    text-transform: uppercase;
+.role-group {
+    width: 100%;
 }
 
-.role-row,
-.technology-row {
+.role-row {
     width: 100%;
 
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding:
+        8px 9px;
+
     border: 0;
-    border-radius: 6px;
+    border-radius: 7px;
 
     background: transparent;
 
     color:
-        oklch(0.34 0.014 258);
+        oklch(0.26 0.015 258);
 
-    font-family: inherit;
-    font-size: 11px;
+    font: inherit;
+    font-size: 11.5px;
+
+    text-align: left;
 
     cursor: pointer;
 }
 
-.role-row {
-    height: 34px;
-
-    display: flex;
-    align-items: center;
-
-    gap: 9px;
-
-    padding: 0 8px;
-
-    text-align: left;
-}
-
-.role-row:hover,
-.role-row.selected,
-.technology-row:hover {
+.role-row:hover {
     background:
-        oklch(0.955 0.012 258);
+        oklch(0.972 0.007 258);
 }
 
 .role-row.selected {
-    color:
-        oklch(0.44 0.19 258);
+    background:
+        oklch(0.962 0.012 258);
 }
 
 .role-glyph {
-    width: 22px;
-    height: 22px;
+    flex: none;
 
-    flex: 0 0 22px;
+    width: 18px;
+    height: 18px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
     color:
-        oklch(0.50 0.014 258);
+        oklch(0.46 0.014 258);
 }
 
 .role-label {
@@ -460,101 +411,94 @@ function addComponent(role: ComponentRole, technology: string) {
 
 .role-chevron {
     color:
-        oklch(0.68 0.012 258);
+        oklch(0.62 0.012 258);
 
-    font-size: 15px;
+    font-size: 13px;
+}
+
+.technology-list {
+    padding:
+        1px 7px 6px 35px;
 }
 
 .technology-row {
+    width: 100%;
+
     display: block;
 
-    padding: 8px 9px;
+    padding:
+        6px 8px;
 
-    text-align: left;
-}
+    border: 0;
+    border-radius: 6px;
 
-.technology-empty {
-    width: 175px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 20px;
+    background: transparent;
 
     color:
-        oklch(0.64 0.012 258);
+        oklch(0.43 0.014 258);
 
+    font: inherit;
     font-size: 10.5px;
 
-    text-align: center;
+    text-align: left;
+
+    cursor: pointer;
 }
 
-/* Shape language from the design */
+.technology-row:hover {
+    background:
+        oklch(0.962 0.012 258);
+
+    color:
+        oklch(0.26 0.015 258);
+}
 
 .glyph-box {
-    width: 17px;
-    height: 13px;
+    width: 14px;
+    height: 11px;
 
     border:
-        1.3px solid currentColor;
+        1.4px solid currentColor;
 
-    border-radius: 3px;
+    border-radius: 2px;
 }
 
 .glyph-database {
     position: relative;
 
-    width: 17px;
-    height: 14px;
+    width: 14px;
+    height: 12px;
 
     border:
-        1.3px solid currentColor;
+        1.4px solid currentColor;
 
-    border-radius: 50% / 24%;
-}
-
-.glyph-database::before {
-    content: "";
-
-    position: absolute;
-
-    left: -1.3px;
-    right: -1.3px;
-    top: 3px;
-
-    height: 3px;
-
-    border-top:
-        1.3px solid currentColor;
-
-    border-radius: 50%;
+    border-radius:
+        50% / 20%;
 }
 
 .glyph-queue {
-    width: 18px;
+    width: 14px;
 
     display: flex;
     flex-direction: column;
-
     gap: 2px;
 }
 
 .glyph-queue i {
     display: block;
 
-    width: 18px;
-    height: 3px;
-
-    border:
-        1.2px solid currentColor;
+    width: 14px;
+    height: 1.5px;
 
     border-radius: 1px;
+
+    background:
+        currentColor;
 }
 
 .glyph-ring {
-    width: 15px;
-    height: 15px;
+    width: 12px;
+    height: 12px;
 
     border:
         1.4px solid currentColor;
@@ -563,22 +507,39 @@ function addComponent(role: ComponentRole, technology: string) {
 }
 
 .glyph-external {
-    width: 17px;
-    height: 13px;
+    width: 14px;
+    height: 11px;
 
     border:
-        1.3px dashed currentColor;
+        1.4px dashed currentColor;
 
-    border-radius: 3px;
+    border-radius: 2px;
 }
 
 .glyph-diamond {
-    width: 13px;
-    height: 13px;
+    width: 10px;
+    height: 10px;
 
     border:
-        1.3px solid currentColor;
+        1.4px solid currentColor;
 
-    transform: rotate(45deg);
+    transform:
+        rotate(45deg);
+
+    border-radius: 1px;
+}
+
+@keyframes pop {
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(-4px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 </style>

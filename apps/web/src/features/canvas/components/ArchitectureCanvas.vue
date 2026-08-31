@@ -6,6 +6,7 @@ import {
   type Edge,
   type Connection,
   useVueFlow,
+  MarkerType,
   type NodeMouseEvent,
 } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
@@ -21,6 +22,7 @@ import { useArchitectureStore } from '../../architectures/stores/architecture.st
 import type { NodeType, Position, ArchitectureNode as DomainArchitectureNode, } from '../../architectures/domain/node'
 import WorkspaceSidePanel from './WorkspaceSidePanel.vue'
 import ContextualSidePanel from './ContextualSidePanel.vue'
+import EmptyArchitectureCanvas from './EmptyArchitectureCanvas.vue'
 
 const architectureStore = useArchitectureStore()
 const selectedEdgeId = ref<string | null>(null)
@@ -500,18 +502,50 @@ const nodes = computed<Node[]>(() => {
 })
 
 const edges = computed<Edge[]>(() =>
-  architectureStore.architecture.edges.map((edge) => ({
-    id: edge.id,
-    source: edge.source.nodeId,
-    target: edge.target.nodeId,
+  architectureStore.architecture.edges.map((edge) => {
+    const selected = selectedEdgeId.value === edge.id
+    const dashed =
+      edge.type === 'async' ||
+      edge.type === 'event' ||
+      edge.type === 'stream'
 
-    label: edge.label,
+    return {
+      id: edge.id,
 
-    data: {
-      edgeType: edge.type,
-      protocol: edge.protocol,
-    },
-  })),
+      source: edge.source.nodeId,
+      target: edge.target.nodeId,
+
+      label: edge.label,
+
+      data: {
+        edgeType: edge.type,
+        protocol: edge.protocol,
+      },
+
+      style: {
+        stroke: selected
+          ? 'oklch(0.60 0.19 258)'
+          : 'oklch(0.70 0.012 258)',
+
+        strokeWidth: selected ? 2 : 1.4,
+
+        strokeDasharray: dashed
+          ? '5 4'
+          : undefined,
+      },
+
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+
+        width: 7,
+        height: 7,
+
+        color: selected
+          ? 'oklch(0.60 0.19 258)'
+          : 'oklch(0.70 0.012 258)',
+      },
+    }
+  }),
 )
 
 function handleNodeDragStop(event: { node: Node }) {
@@ -1162,6 +1196,14 @@ function duplicateSelectedNodes() {
   selectedNodeId.value = selectedNodeIds.value.length === 1 ? selectedNodeIds.value[0] : null
 }
 
+const isArchitectureEmpty = computed(
+  () =>
+    architectureStore.architecture.nodes.length === 0 &&
+    architectureStore.architecture.edges.length === 0 &&
+    architectureStore.architecture.regions.length === 0 &&
+    architectureStore.architecture.annotations.length === 0,
+)
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
 })
@@ -1197,9 +1239,11 @@ onBeforeUnmount(() => {
             " />
       </template>
 
-      <Background />
+      <Background :gap="20" :size="1" />
       <Controls />
     </VueFlow>
+
+    <EmptyArchitectureCanvas v-if="isArchitectureEmpty"/>
 
     <div v-if="pendingComponent" class="component-placement-layer" @mousemove="handleCanvasMouseMove" @mousedown.stop.prevent="handleComponentMouseDown" />
 
@@ -1220,10 +1264,16 @@ onBeforeUnmount(() => {
 <style scoped>
 .architecture-canvas {
   position: relative;
-
   width: 100%;
   height: 100%;
-  min-height: 600px;
+
+  background: oklch(0.98 0.004 258);
+  overflow: hidden;
+}
+
+.architecture-canvas :deep(.vue-flow) {
+  width: 100%;
+  height: 100%;
 }
 
 .region-draw-layer {
