@@ -29,6 +29,8 @@ const selectedEdgeId = ref<string | null>(null)
 const selectedNodeId = ref<string | null>(null)
 const selectedNodeIds = ref<string[]>([])
 const selectedRegionId = ref<string | null>(null)
+const selectedAnnotationId = ref<string | null>(null)
+
 const pendingComponent = ref<AddComponentPayload | null>(null)
 const placementPosition = ref<{ x: number; y: number } | null>(null)
 
@@ -166,65 +168,65 @@ const annotationToolActive = ref(false)
 
 const editingAnnotationId = ref<string | null>(null)
 
-
-
-function handleNodeClick(
-  event: NodeMouseEvent,
-) {
-  const kind = event.node.data?.kind
-
+function clearSelection() {
+  selectedNodeId.value = null
+  selectedNodeIds.value = []
   selectedEdgeId.value = null
   selectedRegionId.value = null
+  selectedAnnotationId.value = null
+}
+
+function handleNodeClick(event: NodeMouseEvent) {
+  const kind = event.node.data?.kind
 
   if (kind === 'architecture') {
     const nodeId = event.node.id
+    const isShiftClick = 'shiftKey' in event.event && event.event.shiftKey
 
-    const isShiftClick = 'shiftKey' in event.event &&
-      event.event.shiftKey
+    selectedEdgeId.value = null
+    selectedRegionId.value = null
 
     if (isShiftClick) {
-      if (
-        selectedNodeIds.value.includes(nodeId)
-      ) {
-        selectedNodeIds.value =
-          selectedNodeIds.value.filter(
-            (id) => id !== nodeId,
-          )
+      if (selectedNodeIds.value.includes(nodeId)) {
+        selectedNodeIds.value = selectedNodeIds.value.filter((id) => id !== nodeId)
       } else {
-        selectedNodeIds.value = [
-          ...selectedNodeIds.value,
-          nodeId,
-        ]
+        selectedNodeIds.value = [...selectedNodeIds.value, nodeId]
       }
     } else {
-      console.log('selectedNodeIds.value', selectedNodeIds.value)
-      if (
-        selectedNodeIds.value.length === 1 && selectedNodeIds.value[0] === nodeId
-      ) {
-        selectedNodeIds.value = []
-      } else {
-        selectedNodeIds.value = [nodeId]
-      }
-      console.log('selectedNodeIds.value', selectedNodeIds.value)
+      selectedNodeIds.value = [nodeId]
     }
 
-    if (selectedNodeIds.value.length === 1) {
-      selectedNodeId.value = selectedNodeIds.value[0]
-    } else {
-      selectedNodeId.value = null
-    }
+    selectedNodeId.value = selectedNodeIds.value.length === 1 ? selectedNodeIds.value[0] : null
+    return
+  }
+
+  if (kind === 'annotation') {
+    clearSelection()
+    selectedAnnotationId.value = event.node.id
     return
   }
 
   if (kind === 'region') {
+    clearSelection()
     selectedRegionId.value = event.node.data?.regionId ?? null
   }
 }
 
+function deleteSelectedAnnotation() {
+  if (!selectedAnnotationId.value) return
+
+  architectureStore.execute({
+    type: 'REMOVE_ANNOTATION',
+    annotationId: selectedAnnotationId.value,
+  })
+
+  selectedAnnotationId.value = null
+  editingAnnotationId.value = null
+}
+
 function handleEdgeClick(event: { edge: Edge }) {
+  clearSelection()
   selectedEdgeId.value = event.edge.id
-  selectedNodeId.value = null
-  selectedRegionId.value = null
 }
 
 function handlePaneClick(event: MouseEvent) {
@@ -232,10 +234,7 @@ function handlePaneClick(event: MouseEvent) {
     return
   }
 
-  selectedNodeId.value = null
-  selectedEdgeId.value = null
-  selectedRegionId.value = null
-  selectedNodeIds.value = []
+  clearSelection()
 
   if (!annotationToolActive.value) {
     return
@@ -709,11 +708,9 @@ function handleNodeDoubleClick(event: { node: Node }) {
     return
   }
 
-  editingAnnotationId.value =
-    event.node.id
-
-  selectedNodeId.value = null
-  selectedEdgeId.value = null
+  clearSelection()
+  selectedAnnotationId.value = event.node.id
+  editingAnnotationId.value = event.node.id
 }
 
 function handleConnect(connection: Connection) {
@@ -1074,10 +1071,7 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 
   if (event.key === 'Escape') {
-    selectedNodeIds.value = []
-    selectedNodeId.value = null
-    selectedEdgeId.value = null
-    selectedRegionId.value = null
+    clearSelection()
 
     pendingComponent.value = null
     placementPosition.value = null
@@ -1123,12 +1117,16 @@ function handleKeyDown(event: KeyboardEvent) {
     return
   }
 
-  if (selectedNodeIds.value.length === 0) {
+  if (selectedAnnotationId.value) {
+    event.preventDefault()
+    deleteSelectedAnnotation()
     return
   }
 
-  event.preventDefault()
-  deleteSelectedNodes()
+  if (selectedNodeIds.value.length > 0) {
+    event.preventDefault()
+    deleteSelectedNodes()
+  }
 }
 
 function duplicateSelectedNodes() {
@@ -1224,8 +1222,7 @@ onBeforeUnmount(() => {
       </template>
 
       <template #node-annotation="nodeProps">
-        <CanvasAnnotation :data="nodeProps.data" @commit="
-          updateAnnotation(nodeProps.id, $event)" />
+        <CanvasAnnotation :data="nodeProps.data" :selected="selectedAnnotationId === nodeProps.id" @commit="updateAnnotation(nodeProps.id, $event)" />
       </template>
 
       <template #node-region="nodeProps">
@@ -1243,15 +1240,17 @@ onBeforeUnmount(() => {
       <Controls />
     </VueFlow>
 
-    <EmptyArchitectureCanvas v-if="isArchitectureEmpty"/>
+    <EmptyArchitectureCanvas v-if="isArchitectureEmpty" />
 
-    <div v-if="pendingComponent" class="component-placement-layer" @mousemove="handleCanvasMouseMove" @mousedown.stop.prevent="handleComponentMouseDown" />
+    <div v-if="pendingComponent" class="component-placement-layer" @mousemove="handleCanvasMouseMove"
+      @mousedown.stop.prevent="handleComponentMouseDown" />
 
     <div v-if="regionToolActive" class="region-draw-layer" @mousedown.stop.prevent="handleRegionDrawStart" />
 
     <button class="temporary-delete" @click="deleteSelectedNodes"> Delete selected </button>
 
-    <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"  @region-tool="handleRegionTool" />
+    <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"
+      @region-tool="handleRegionTool" />
 
     <ContextualSidePanel v-if="hasContextualSelection" :selected-node-id="selectedNodeId"
       :selected-node-ids="selectedNodeIds" :selected-edge-id="selectedEdgeId" :selected-region-id="selectedRegionId" />

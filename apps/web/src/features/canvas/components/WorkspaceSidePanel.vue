@@ -1,125 +1,88 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-type WorkspaceTab =
-    | 'architect'
-    | 'patterns'
-    | 'load'
-    | 'review'
+type WorkspaceTab = 'architect' | 'patterns' | 'load' | 'review'
 
-const activeTab =
-    ref<WorkspaceTab>('architect')
+const activeTab = ref<WorkspaceTab>('architect')
 </script>
 
 <template>
-    <aside class="workspace-side-panel">
-        <nav class="side-tabs">
-            <button :class="{ active: activeTab === 'architect' }" @click="activeTab = 'architect'">
-                Architect
-            </button>
+  <aside class="workspace-side-panel">
+    <nav class="side-tabs">
+      <button :class="{ active: activeTab === 'architect' }" @click="activeTab = 'architect'">Architect</button>
+      <button :class="{ active: activeTab === 'patterns' }" @click="activeTab = 'patterns'">Patterns</button>
+      <button :class="{ active: activeTab === 'load' }" @click="activeTab = 'load'">Load</button>
+      <button :class="{ active: activeTab === 'review' }" @click="activeTab = 'review'">Review</button>
+    </nav>
 
-            <button :class="{ active: activeTab === 'patterns' }" @click="activeTab = 'patterns'">
-                Patterns
-            </button>
+    <div class="side-panel-content">
+      <template v-if="activeTab === 'architect'">
+      </template>
 
-            <button :class="{ active: activeTab === 'load' }" @click="activeTab = 'load'">
-                Load
-            </button>
+      <template v-else-if="activeTab === 'patterns'">
+      </template>
 
-            <button :class="{ active: activeTab === 'review' }" @click="activeTab = 'review'">
-                Review
-            </button>
-        </nav>
+      <template v-else-if="activeTab === 'load'">
+      </template>
 
-        <div class="side-panel-content">
-            <template v-if="activeTab === 'architect'">
-                <!-- Module 2 -->
-            </template>
-
-            <template v-else-if="activeTab === 'patterns'">
-                <!-- Module 7 -->
-            </template>
-
-            <template v-else-if="activeTab === 'load'">
-                <!-- Module 8 -->
-            </template>
-
-            <template v-else>
-                <!-- Module 6 -->
-            </template>
-        </div>
-    </aside>
+      <template v-else>
+      </template>
+    </div>
+  </aside>
 </template>
 
 <style scoped>
 .workspace-side-panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 20;
-
-    width: 320px;
-
-    background: oklch(1 0 0);
-    border-left: 1px solid oklch(0.875 0.008 258);
-
-    font-family: 'IBM Plex Sans', sans-serif;
-    color: oklch(0.25 0.015 258);
+  position: absolute;
+  top: 64px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 32;
+  width: 344px;
+  display: flex;
+  flex-direction: column;
+  background: oklch(1 0 0);
+  border: 1px solid oklch(0.895 0.008 258);
+  border-radius: 12px;
+  box-shadow: 0 2px 6px oklch(0.55 0.03 258 / 0.10), 0 18px 36px -22px oklch(0.50 0.05 258 / 0.30);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color: oklch(0.25 0.015 258);
+  overflow: hidden;
 }
 
 .side-tabs {
-    display: flex;
-    align-items: stretch;
-
-    height: 44px;
-
-    border-bottom: 1px solid oklch(0.875 0.008 258);
+  display: flex;
+  flex: none;
+  padding: 5px;
+  border-bottom: 1px solid oklch(0.93 0.006 258);
 }
 
 .side-tabs button {
-    position: relative;
-
-    flex: 1;
-
-    border: 0;
-    padding: 0 8px;
-
-    background: transparent;
-    color: oklch(0.48 0.015 258);
-
-    font: inherit;
-    font-size: 12px;
-    font-weight: 500;
-
-    cursor: pointer;
+  flex: 1;
+  padding: 7px 5px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: oklch(0.52 0.014 258);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 400;
+  cursor: pointer;
 }
 
 .side-tabs button:hover {
-    color: oklch(0.25 0.015 258);
+  background: oklch(0.972 0.008 258);
 }
 
 .side-tabs button.active {
-    color: oklch(0.25 0.015 258);
-}
-
-.side-tabs button.active::after {
-    content: '';
-
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: -1px;
-
-    height: 2px;
-
-    background: oklch(0.60 0.19 258);
+  background: oklch(0.95 0.025 258);
+  color: oklch(0.44 0.19 258);
+  font-weight: 500;
 }
 
 .side-panel-content {
-    height: calc(100% - 44px);
-    overflow: auto;
-
-    padding: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 </style>

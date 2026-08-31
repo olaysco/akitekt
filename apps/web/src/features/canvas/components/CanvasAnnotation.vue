@@ -10,6 +10,7 @@ type Props = {
         text: string
         editing?: boolean
     }
+    selected?: boolean
 }
 
 const props = defineProps<Props>()
@@ -65,7 +66,7 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="canvas-annotation">
+    <div class="canvas-annotation" :class="{ selected }">
         <textarea v-if="data.editing" ref="textarea" v-model="draft" rows="2" class="nodrag" @blur="commit" @click.stop
             @mousedown.stop @keydown="handleKeydown" />
         <div v-else class="annotation-text">{{ data.text }} </div>
@@ -162,5 +163,10 @@ textarea {
     box-shadow:
         0 0 0 2px oklch(0.60 0.19 258 / 0.11),
         0 16px 34px -20px oklch(0.50 0.05 258 / 0.34);
+}
+
+.canvas-annotation.selected {
+  border-color: oklch(0.60 0.19 258);
+  box-shadow: 0 0 0 2px oklch(0.60 0.19 258 / 0.11), 0 16px 34px -20px oklch(0.50 0.05 258 / 0.34);
 }
 </style>
