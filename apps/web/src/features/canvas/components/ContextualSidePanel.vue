@@ -13,28 +13,16 @@ defineProps<{
 
 <template>
   <aside class="contextual-side-panel">
-    <NodeInspector
-      v-if="
-        selectedNodeIds.length === 1 &&
-        selectedNodeId
-      "
-      :node-id="selectedNodeId"
-    />
+    <NodeInspector v-if="
+      selectedNodeIds.length === 1 &&
+      selectedNodeId
+    " :node-id="selectedNodeId" />
 
-    <EdgeInspector
-      v-else-if="selectedEdgeId"
-      :edge-id="selectedEdgeId"
-    />
+    <EdgeInspector v-else-if="selectedEdgeId" :edge-id="selectedEdgeId" />
 
-    <RegionInspector
-      v-else-if="selectedRegionId"
-      :region-id="selectedRegionId"
-    />
+    <RegionInspector v-else-if="selectedRegionId" :region-id="selectedRegionId" />
 
-    <div
-      v-else-if="selectedNodeIds.length > 1"
-      class="multi-selection-inspector"
-    >
+    <div v-else-if="selectedNodeIds.length > 1" class="multi-selection-inspector">
       <div class="inspector-heading">
         Selection
       </div>
@@ -55,21 +43,35 @@ defineProps<{
 <style scoped>
 .contextual-side-panel {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 20;
 
-  width: 320px;
+  top: 64px;
+  right: 14px;
+  bottom: 14px;
+
+  z-index: 32;
+
+  width: 344px;
 
   background: oklch(1 0 0);
-  border-left:
-    1px solid oklch(0.875 0.008 258);
 
-  font-family: 'IBM Plex Sans', sans-serif;
+  border: 1px solid oklch(0.895 0.008 258);
+
+  border-radius: 12px;
+
+  box-shadow:
+    0 2px 6px oklch(0.55 0.03 258 / 0.10),
+    0 18px 36px -22px oklch(0.50 0.05 258 / 0.30);
+
+  font-family:
+    "IBM Plex Sans",
+    system-ui,
+    sans-serif;
+
   color: oklch(0.25 0.015 258);
 
   overflow-y: auto;
+
+  overflow-x: hidden;
 }
 
 .multi-selection-inspector {
@@ -77,28 +79,39 @@ defineProps<{
 }
 
 .inspector-heading {
-  font-size: 11px;
-  font-weight: 600;
+  font-size:
+    9.5px;
 
-  color: oklch(0.48 0.015 258);
+  font-weight:
+    500;
+
+  color: oklch(0.54 0.014 258);
 
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+
+  letter-spacing: 0.14em;
 }
 
 .selection-count {
-  margin-top: 8px;
+  margin-top:
+    10px;
 
-  font-size: 14px;
+  font-size: 13px;
+
   font-weight: 600;
+
+  color: oklch(0.24 0.016 258);
 }
 
 .selection-description {
-  margin: 6px 0 0;
+  margin:
+    5px 0 0;
 
-  font-size: 12px;
+  font-size: 11px;
+
   line-height: 1.5;
 
-  color: oklch(0.48 0.015 258);
+  color:
+    oklch(0.52 0.014 258);
 }
 </style>

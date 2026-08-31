@@ -123,164 +123,253 @@ function removeNode() {
     })
 }
 </script>
-
 <template>
-    <aside v-if="node" class="node-inspector">
+    <div v-if="node" class="node-inspector">
         <div class="header">
-            <div class="eyebrow">
-                Component
+            <div class="header-title">
+                <strong>
+                    {{ node.name }}
+                </strong>
+
+                <span class="eyebrow">
+                    {{ node.type }}
+                </span>
             </div>
 
-            <strong>
-                {{ node.name }}
-            </strong>
+            <button class="danger" @click="removeNode">
+                Delete
+            </button>
         </div>
 
-        <label class="field">
-            <span>Name</span>
+        <div class="fields">
+            <label class="field">
+                <span>Name</span>
 
-            <input :value="node.name" @change="
-                updateName(
-                    ($event.target as HTMLInputElement).value,
-                )
-                " />
-        </label>
+                <input :value="node.name" @change="
+                    updateName(
+                        ($event.target as HTMLInputElement).value,
+                    )
+                    " />
+            </label>
 
-        <label class="field">
-            <span>Type</span>
+            <label class="field">
+                <span>Type</span>
 
-            <select :value="node.type" @change="
-                updateType(
-                    ($event.target as HTMLSelectElement)
-                        .value as NodeType,
-                )
-                ">
-                <option value="client">Client</option>
-                <option value="service">Service</option>
-                <option value="worker">Worker</option>
-                <option value="database">Database</option>
-                <option value="cache">Cache</option>
-                <option value="queue">Queue</option>
-                <option value="stream">Stream</option>
-                <option value="load-balancer">Load balancer</option>
-                <option value="gateway">Gateway</option>
-                <option value="external">External system</option>
-                <option value="storage">Storage</option>
-                <option value="scheduler">Scheduler</option>
-                <option value="custom">Custom</option>
-            </select>
-        </label>
+                <select :value="node.type" @change="
+                    updateType(
+                        ($event.target as HTMLSelectElement)
+                            .value as NodeType,
+                    )
+                    ">
+                    <option value="client">Client</option>
+                    <option value="service">Service</option>
+                    <option value="worker">Worker</option>
+                    <option value="database">Database</option>
+                    <option value="cache">Cache</option>
+                    <option value="queue">Queue</option>
+                    <option value="stream">Stream</option>
+                    <option value="load-balancer">
+                        Load balancer
+                    </option>
+                    <option value="gateway">Gateway</option>
+                    <option value="external">
+                        External system
+                    </option>
+                    <option value="storage">Storage</option>
+                    <option value="scheduler">
+                        Scheduler
+                    </option>
+                    <option value="custom">Custom</option>
+                </select>
+            </label>
 
-        <label class="field">
-            <span>Technology</span>
+            <label class="field">
+                <span>Technology</span>
 
-            <input :value="node.metadata.technology ?? ''" placeholder="e.g. Go, PostgreSQL, RabbitMQ" @change="
-                updateTechnology(
-                    ($event.target as HTMLInputElement).value,
-                )
-                " />
-        </label>
+                <input :value="node.metadata.technology ?? ''" placeholder="e.g. Go, PostgreSQL, RabbitMQ" @change="
+                    updateTechnology(
+                        ($event.target as HTMLInputElement).value,
+                    )
+                    " />
+            </label>
 
-        <label class="field">
-            <span>Instances</span>
+            <label class="field">
+                <span>Instances</span>
 
-            <input type="number" min="1" :value="node.metadata.instances ?? 1" @change="
-                updateInstances(
-                    ($event.target as HTMLInputElement).value,
-                )
-                " />
-        </label>
+                <input type="number" min="1" :value="node.metadata.instances ?? 1" @change="
+                    updateInstances(
+                        ($event.target as HTMLInputElement).value,
+                    )
+                    " />
+            </label>
 
-        <label class="field">
-            <span>Timeout (ms)</span>
+            <label class="field">
+                <span>Timeout (ms)</span>
 
-            <input type="number" min="0" :value="node.behavior.timeoutMs ?? ''" placeholder="None" @change="
-                updateTimeout(
-                    ($event.target as HTMLInputElement).value,
-                )
-                " />
-        </label>
-
-        <button class="danger" @click="removeNode">
-            Delete component
-        </button>
-    </aside>
+                <input type="number" min="0" :value="node.behavior.timeoutMs ?? ''" placeholder="None" @change="
+                    updateTimeout(
+                        ($event.target as HTMLInputElement).value,
+                    )
+                    " />
+            </label>
+        </div>
+    </div>
 </template>
 
 <style scoped>
 .node-inspector {
-    position: absolute;
-    top: 16px;
-    right: 16px;
+    width: 100%;
+    min-height: 100%;
 
-    width: 280px;
-    padding: 16px;
+    display: flex;
+    flex-direction: column;
 
-    background: white;
-    border: 1px solid #e4e7ec;
-    /* border-radius: 12px;
-
-    box-shadow:
-        0 4px 10px rgba(16, 24, 40, 0.06),
-        0 12px 28px rgba(16, 24, 40, 0.08);
-
-    z-index: 20; */
+    color:
+        oklch(0.25 0.015 258);
 }
 
 .header {
-    margin-bottom: 20px;
+    min-height: 54px;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding:
+        9px 13px;
+
+    border-bottom:
+        1px solid oklch(0.93 0.006 258);
+}
+
+.header-title {
+    min-width: 0;
+
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.header strong {
+    overflow: hidden;
+
+    color:
+        oklch(0.22 0.016 258);
+
+    font-size:
+        13.5px;
+
+    font-weight:
+        600;
+
+    letter-spacing:
+        -0.015em;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .eyebrow {
-    margin-bottom: 4px;
+    color:
+        oklch(0.58 0.014 258);
 
-    font-size: 11px;
-    font-weight: 600;
+    font-size:
+        9.5px;
 
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing:
+        0.12em;
 
-    color: #98a2b3;
+    text-transform:
+        uppercase;
+}
+
+.fields {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+
+    padding:
+        13px;
 }
 
 .field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
+}
 
-    margin-bottom: 14px;
+.field>span {
+    color:
+        oklch(0.58 0.014 258);
 
-    font-size: 12px;
-    font-weight: 500;
+    font-size:
+        9.5px;
 
-    color: #475467;
+    font-weight:
+        400;
+
+    letter-spacing:
+        0.12em;
+
+    text-transform:
+        uppercase;
 }
 
 input,
 select {
     width: 100%;
+
     box-sizing: border-box;
 
-    padding: 9px 10px;
+    padding:
+        7px 9px;
 
-    border: 1px solid #d0d5dd;
-    border-radius: 8px;
+    background:
+        oklch(0.978 0.004 258);
 
-    background: white;
-    color: #101828;
+    border:
+        1px solid oklch(0.90 0.008 258);
+
+    border-radius:
+        7px;
+
+    color:
+        oklch(0.24 0.015 258);
+
+    font-family:
+        inherit;
+
+    font-size:
+        12px;
+
+    outline:
+        none;
+}
+
+input:focus,
+select:focus {
+    border-color:
+        oklch(0.60 0.19 258);
 }
 
 .danger {
-    width: 100%;
+    flex: none;
 
-    margin-top: 8px;
-    padding: 9px 12px;
+    padding: 4px 8px;
 
-    border: 1px solid #fda29b;
-    border-radius: 8px;
+    background:
+        transparent;
 
-    background: white;
-    color: #b42318;
+    border: 1px solid oklch(0.90 0.02 27);
+
+    border-radius: 6px;
+
+    color: oklch(0.58 0.21 27);
+
+    font-family: inherit;
+
+    font-size: 10.5px;
 
     cursor: pointer;
 }
