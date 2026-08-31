@@ -13,9 +13,6 @@ import { Controls } from '@vue-flow/controls'
 
 
 import CanvasRegion from './CanvasRegion.vue'
-import EdgeInspector from './EdgeInspector.vue'
-import NodeInspector from './NodeInspector.vue'
-import RegionInspector from './RegionInspector.vue'
 import CanvasAnnotation from './CanvasAnnotation.vue'
 import ArchitectureNode from '../nodes/ArchitectureNode.vue'
 import type { DocumentOperation } from '../../architectures/domain/operation'
@@ -109,10 +106,6 @@ const hasContextualSelection = computed(() =>
   selectedEdgeId.value !== null ||
   selectedRegionId.value !== null ||
   hasMultiNodeSelection.value,
-)
-
-const hasNoSelection = computed(
-  () => !hasContextualSelection.value,
 )
 
 function getComponentName(

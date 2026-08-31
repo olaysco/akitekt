@@ -6,6 +6,7 @@ import type { DocumentOperation } from '../domain/operation'
 
 import { applyOperation } from '../operations/applyOperation'
 import { invertOperation } from '../operations/invertOperation'
+import { loadArchitecture, saveArchitecture } from '../services/architecturePersistence'
 
 type HistoryEntry = {
     operation: DocumentOperation
@@ -30,11 +31,13 @@ function createEmptyArchitecture(): Architecture {
     }
 }
 
+const savedArchitecture = loadArchitecture()
+
 export const useArchitectureStore = defineStore(
     'architecture',
     () => {
         const architecture = ref<Architecture>(
-            createEmptyArchitecture(),
+            savedArchitecture ?? createEmptyArchitecture(),
         )
 
         const undoStack = ref<HistoryEntry[]>([])
@@ -48,9 +51,7 @@ export const useArchitectureStore = defineStore(
             () => redoStack.value.length > 0,
         )
 
-        function execute(
-            operation: DocumentOperation,
-        ): void {
+        function execute( operation: DocumentOperation ): void {
             const architectureBefore =
                 architecture.value
 
@@ -64,9 +65,7 @@ export const useArchitectureStore = defineStore(
                 operation,
             )
 
-            architecture.value = {
-                ...nextArchitecture,
-
+            architecture.value = { ...nextArchitecture,
                 metadata: {
                     ...nextArchitecture.metadata,
                     updatedAt: new Date().toISOString(),
@@ -79,6 +78,8 @@ export const useArchitectureStore = defineStore(
             })
 
             redoStack.value = []
+
+            saveArchitecture(architecture.value)
         }
 
         function undo(): void {
@@ -94,6 +95,7 @@ export const useArchitectureStore = defineStore(
             )
 
             redoStack.value.push(entry)
+            saveArchitecture(architecture.value)
         }
 
         function redo(): void {
@@ -109,6 +111,7 @@ export const useArchitectureStore = defineStore(
             )
 
             undoStack.value.push(entry)
+            saveArchitecture(architecture.value)
         }
 
         function replaceArchitecture(
@@ -118,6 +121,8 @@ export const useArchitectureStore = defineStore(
 
             undoStack.value = []
             redoStack.value = []
+
+            saveArchitecture(architecture.value)
         }
 
         function resetArchitecture(): void {
@@ -126,6 +131,7 @@ export const useArchitectureStore = defineStore(
 
             undoStack.value = []
             redoStack.value = []
+            saveArchitecture(architecture.value)
         }
 
         return {
