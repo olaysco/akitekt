@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import AIArchitecturePanel from '../../ai/components/AIArchitecturePanel.vue'
+import { createHTTPAIArchitectureProvider } from '../../ai/services/create-http-ai-architecture-provider'
+import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 
 type WorkspaceTab = 'architect' | 'patterns' | 'load' | 'review'
 
 const activeTab = ref<WorkspaceTab>('architect')
+const architectureStore = useArchitectureStore()
+const aiProvider = createHTTPAIArchitectureProvider({
+  endpoint: '/api/ai/architecture/proposals',
+})
 </script>
 
 <template>
@@ -17,6 +24,10 @@ const activeTab = ref<WorkspaceTab>('architect')
 
     <div class="side-panel-content">
       <template v-if="activeTab === 'architect'">
+        <AIArchitecturePanel
+          :architecture="architectureStore.architecture"
+          :provider="aiProvider"
+        />
       </template>
 
       <template v-else-if="activeTab === 'patterns'">
