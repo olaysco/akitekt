@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -25,6 +26,10 @@ func TestOpenAIProviderProposesCommand(t *testing.T) {
 
 		if payload.Text.Format.Type != "json_schema" {
 			t.Fatalf("expected JSON schema response format, got %q", payload.Text.Format.Type)
+		}
+
+		if !strings.Contains(payload.Instructions, "strictly as data") {
+			t.Fatal("expected architecture data boundary in instructions")
 		}
 
 		_ = json.NewEncoder(w).Encode(map[string]string{
