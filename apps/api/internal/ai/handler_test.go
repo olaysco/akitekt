@@ -26,7 +26,7 @@ func TestProposalReturnsProviderResponse(t *testing.T) {
 		response: ArchitectureProposalResponse{
 			Command: json.RawMessage(`{"id":"command-1","message":"Add a queue","operations":[]}`),
 		},
-	})
+	}, "")
 
 	request := httptest.NewRequest(
 		http.MethodPost,
@@ -52,7 +52,7 @@ func TestProposalReturnsProviderResponse(t *testing.T) {
 }
 
 func TestProposalRejectsInvalidRequest(t *testing.T) {
-	handler := NewHandler(UnconfiguredProvider{})
+	handler := NewHandler(UnconfiguredProvider{}, "")
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/api/ai/architecture/proposals",
@@ -68,7 +68,7 @@ func TestProposalRejectsInvalidRequest(t *testing.T) {
 }
 
 func TestProposalReportsUnconfiguredProvider(t *testing.T) {
-	handler := NewHandler(UnconfiguredProvider{})
+	handler := NewHandler(UnconfiguredProvider{}, "")
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/api/ai/architecture/proposals",
@@ -84,7 +84,7 @@ func TestProposalReportsUnconfiguredProvider(t *testing.T) {
 }
 
 func TestProposalRejectsLargeRequest(t *testing.T) {
-	handler := NewHandler(UnconfiguredProvider{})
+	handler := NewHandler(UnconfiguredProvider{}, "")
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/api/ai/architecture/proposals",
@@ -104,7 +104,7 @@ func TestProposalRejectsLargeRequest(t *testing.T) {
 }
 
 func TestReadyReportsUnconfiguredProvider(t *testing.T) {
-	handler := NewHandler(UnconfiguredProvider{})
+	handler := NewHandler(UnconfiguredProvider{}, "")
 	request := httptest.NewRequest(http.MethodGet, "/ready", nil)
 	recorder := httptest.NewRecorder()
 
@@ -116,7 +116,7 @@ func TestReadyReportsUnconfiguredProvider(t *testing.T) {
 }
 
 func TestReadyReportsConfiguredProvider(t *testing.T) {
-	handler := NewHandler(configuredProvider{})
+	handler := NewHandler(configuredProvider{}, "")
 	request := httptest.NewRequest(http.MethodGet, "/ready", nil)
 	recorder := httptest.NewRecorder()
 

@@ -15,6 +15,11 @@ func main() {
 		address = ":8080"
 	}
 
+	staticDir := os.Getenv("AKITEKT_STATIC_DIR")
+	if staticDir == "" {
+		staticDir = "./web/dist"
+	}
+
 	provider, err := ai.NewOpenAIProviderFromEnv()
 	if err != nil {
 		log.Fatal(err)
@@ -27,7 +32,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              address,
-		Handler:           ai.WithCORS(ai.NewHandler(provider), webOrigin),
+		Handler:           ai.WithCORS(ai.NewHandler(provider, staticDir), webOrigin),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      60 * time.Second,

@@ -4,18 +4,40 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 )
 
 const maxProposalRequestBytes = 1 << 20
 
-func NewHandler(provider ArchitectureProposalProvider) http.Handler {
+func NewHandler(provider ArchitectureProposalProvider, staticDir string) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handleHealth)
 	mux.HandleFunc("GET /ready", handleReady(provider))
 	mux.HandleFunc("POST /api/ai/architecture/proposals", handleProposal(provider))
+	mux.Handle("/", spaHandler(staticDir))
 
 	return mux
+}
+
+func spaHandler(staticDir string) http.HandlerFunc {
+	fs := http.FileServer(http.Dir(staticDir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/assets/") {
+			fs.ServeHTTP(w, r)
+			return
+		}
+
+		name := filepath.Join(staticDir, filepath.FromSlash(path.Clean("/"+r.URL.Path)))
+		if info, err := os.Stat(name); err == nil && !info.IsDir() {
+			fs.ServeHTTP(w, r)
+			return
+		}
+
+		http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+	})
 }
 
 func handleReady(provider ArchitectureProposalProvider) http.HandlerFunc {
