@@ -6,6 +6,65 @@ const startY = 120
 const layerGap = 280
 const rowGap = 140
 
+function createRegionLayoutOperations(
+  architecture: Architecture,
+  plannedPositions: Map<string, { x: number; y: number }>,
+): DocumentOperation[] {
+  const padding = 48
+
+  return architecture.regions.flatMap((region): DocumentOperation[] => {
+    const members = architecture.nodes.filter(
+      (node) => node.regionId === region.id,
+    )
+
+    if (members.length === 0) return []
+
+    const bounds = members.reduce(
+      (current, node) => {
+        const position = plannedPositions.get(node.id) ?? node.position
+        const width = node.size?.width ?? 204
+        const height = node.size?.height ?? 88
+
+        return {
+          minX: Math.min(current.minX, position.x),
+          minY: Math.min(current.minY, position.y),
+          maxX: Math.max(current.maxX, position.x + width),
+          maxY: Math.max(current.maxY, position.y + height),
+        }
+      },
+      {
+        minX: Infinity,
+        minY: Infinity,
+        maxX: -Infinity,
+        maxY: -Infinity,
+      },
+    )
+
+    const position = {
+      x: bounds.minX - padding,
+      y: bounds.minY - padding,
+    }
+
+    const size = {
+      width: bounds.maxX - bounds.minX + padding * 2,
+      height: bounds.maxY - bounds.minY + padding * 2,
+    }
+
+    return [
+      {
+        type: 'MOVE_REGION',
+        regionId: region.id,
+        position,
+      },
+      {
+        type: 'RESIZE_REGION',
+        regionId: region.id,
+        size,
+      },
+    ]
+  })
+}
+
 export function createAutoLayoutOperations(
   architecture: Architecture,
 ): DocumentOperation[] {
@@ -13,6 +72,7 @@ export function createAutoLayoutOperations(
   const incoming = new Map<string, number>()
   const outgoing = new Map<string, string[]>()
   const layers = new Map<string, number>()
+  const plannedPositions = new Map<string, { x: number; y: number }>()
 
   for (const node of architecture.nodes) {
     incoming.set(node.id, 0)
@@ -80,7 +140,7 @@ export function createAutoLayoutOperations(
     nodesByLayer.set(layer, nodes)
   }
 
-  return Array.from(nodesByLayer.entries()).flatMap(([layer, nodes]) =>
+  const nodeOperations = Array.from(nodesByLayer.entries()).flatMap(([layer, nodes]) =>
     nodes
       .sort((left, right) => left.name.localeCompare(right.name))
       .flatMap((node, index): DocumentOperation[] => {
@@ -88,6 +148,8 @@ export function createAutoLayoutOperations(
           x: startX + layer * layerGap,
           y: startY + index * rowGap,
         }
+
+        plannedPositions.set(node.id, position)
 
         if (
           node.position.x === position.x &&
@@ -103,4 +165,12 @@ export function createAutoLayoutOperations(
         }]
       }),
   )
+
+  return [
+        ...nodeOperations,
+        ...createRegionLayoutOperations(
+            architecture,
+            plannedPositions,
+        ),
+    ]
 }

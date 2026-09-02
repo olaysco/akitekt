@@ -50,7 +50,7 @@ async function submit() {
         id="architecture-prompt"
         v-model="message"
         :disabled="isProposing"
-        placeholder="Add a queue between the API and the worker."
+        placeholder="Design a simple notification system"
         rows="4"
       />
 
