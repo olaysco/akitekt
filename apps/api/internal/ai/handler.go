@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const maxProposalRequestBytes = 1 << 20
+
 func NewHandler(provider ArchitectureProposalProvider) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handleHealth)
@@ -22,8 +24,15 @@ func handleHealth(w http.ResponseWriter, _ *http.Request) {
 func handleProposal(provider ArchitectureProposalProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var request ArchitectureProposalRequest
+		r.Body = http.MaxBytesReader(w, r.Body, maxProposalRequestBytes)
 
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			var maxBytesError *http.MaxBytesError
+			if errors.As(err, &maxBytesError) {
+				http.Error(w, "AI architecture request is too large.", http.StatusRequestEntityTooLarge)
+				return
+			}
+
 			http.Error(w, "Invalid AI architecture request.", http.StatusBadRequest)
 			return
 		}

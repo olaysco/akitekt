@@ -82,3 +82,23 @@ func TestProposalReportsUnconfiguredProvider(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusServiceUnavailable, recorder.Code)
 	}
 }
+
+func TestProposalRejectsLargeRequest(t *testing.T) {
+	handler := NewHandler(UnconfiguredProvider{})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/ai/architecture/proposals",
+		strings.NewReader(
+			`{"id":"request-1","message":"`+
+				strings.Repeat("x", maxProposalRequestBytes)+
+				`","architecture":{}}`,
+		),
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected status %d, got %d", http.StatusRequestEntityTooLarge, recorder.Code)
+	}
+}
