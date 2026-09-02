@@ -20,9 +20,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	webOrigin := os.Getenv("AKITEKT_WEB_ORIGIN")
+	if webOrigin == "" {
+		webOrigin = "http://localhost:5173"
+	}
+
 	server := &http.Server{
 		Addr:              address,
-		Handler:           ai.NewHandler(provider),
+		Handler:           ai.WithCORS(ai.NewHandler(provider), webOrigin),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      60 * time.Second,

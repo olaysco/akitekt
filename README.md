@@ -12,6 +12,8 @@ OPENAI_API_KEY=your-key go run ./cmd/server
 
 Optionally select a model with `OPENAI_MODEL`; it defaults to `gpt-5.2`.
 
+For a web app served from a different origin, set `AKITEKT_WEB_ORIGIN` to that exact origin. It defaults to `http://localhost:5173`.
+
 Then start the web app from `apps/web`:
 
 ```sh
