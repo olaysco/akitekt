@@ -219,11 +219,9 @@ var aiArchitectureCommandSchema = map[string]any{
 		"id":      map[string]any{"type": "string"},
 		"message": map[string]any{"type": "string"},
 		"operations": map[string]any{
-			"type": "array",
-			"items": map[string]any{
-				"type":                 "object",
-				"additionalProperties": true,
-			},
+			"type":     "array",
+			"minItems": 1,
+			"items":    map[string]any{"$ref": "#/$defs/operation"},
 		},
 		"summary": map[string]any{"type": "string"},
 		"assumptions": map[string]any{
@@ -233,4 +231,94 @@ var aiArchitectureCommandSchema = map[string]any{
 	},
 	"required":             []string{"id", "message", "operations"},
 	"additionalProperties": false,
+	"$defs": map[string]any{
+		"operation": operationSchema(),
+	},
+}
+
+func operationSchema() map[string]any {
+	position := map[string]any{
+		"type":                 "object",
+		"properties":           map[string]any{"x": map[string]any{"type": "number"}, "y": map[string]any{"type": "number"}},
+		"required":             []string{"x", "y"},
+		"additionalProperties": false,
+	}
+	size := map[string]any{
+		"type":                 "object",
+		"properties":           map[string]any{"width": map[string]any{"type": "number", "exclusiveMinimum": 0}, "height": map[string]any{"type": "number", "exclusiveMinimum": 0}},
+		"required":             []string{"width", "height"},
+		"additionalProperties": false,
+	}
+	node := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"id":       map[string]any{"type": "string"},
+			"type":     map[string]any{"enum": []string{"client", "service", "worker", "database", "cache", "queue", "stream", "load-balancer", "gateway", "external", "storage", "scheduler", "custom"}},
+			"name":     map[string]any{"type": "string"},
+			"position": position,
+			"size":     size,
+			"metadata": map[string]any{"type": "object"},
+			"behavior": map[string]any{"type": "object"},
+		},
+		"required":             []string{"id", "type", "name", "position", "metadata", "behavior"},
+		"additionalProperties": true,
+	}
+	endpoint := map[string]any{
+		"type":                 "object",
+		"properties":           map[string]any{"nodeId": map[string]any{"type": "string"}, "portId": map[string]any{"type": "string"}},
+		"required":             []string{"nodeId"},
+		"additionalProperties": false,
+	}
+	edge := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"id":       map[string]any{"type": "string"},
+			"source":   endpoint,
+			"target":   endpoint,
+			"type":     map[string]any{"enum": []string{"sync", "async", "event", "query", "replication", "stream", "custom"}},
+			"protocol": map[string]any{"enum": []string{"http", "https", "grpc", "tcp", "websocket", "sql", "amqp", "kafka", "epp", "dns", "mqtt", "coap", "ftp", "sftp", "smtp", "custom"}},
+			"label":    map[string]any{"type": "string"},
+			"behavior": map[string]any{"type": "object"},
+		},
+		"required":             []string{"id", "source", "target", "type", "behavior"},
+		"additionalProperties": true,
+	}
+	region := map[string]any{
+		"type":                 "object",
+		"properties":           map[string]any{"id": map[string]any{"type": "string"}, "name": map[string]any{"type": "string"}, "position": position, "size": size},
+		"required":             []string{"id", "name", "position", "size"},
+		"additionalProperties": true,
+	}
+	annotation := map[string]any{
+		"type":                 "object",
+		"properties":           map[string]any{"id": map[string]any{"type": "string"}, "text": map[string]any{"type": "string"}, "position": position},
+		"required":             []string{"id", "text", "position"},
+		"additionalProperties": true,
+	}
+	changes := map[string]any{"type": "object"}
+	identifier := func(name string) map[string]any { return map[string]any{"type": "string"} }
+	operation := func(kind string, properties map[string]any, required ...string) map[string]any {
+		properties["type"] = map[string]any{"const": kind}
+		return map[string]any{"type": "object", "properties": properties, "required": append([]string{"type"}, required...), "additionalProperties": true}
+	}
+
+	return map[string]any{"oneOf": []any{
+		operation("ADD_NODE", map[string]any{"node": node}, "node"),
+		operation("UPDATE_NODE", map[string]any{"nodeId": identifier("nodeId"), "changes": changes}, "nodeId", "changes"),
+		operation("REMOVE_NODE", map[string]any{"nodeId": identifier("nodeId")}, "nodeId"),
+		operation("ADD_EDGE", map[string]any{"edge": edge}, "edge"),
+		operation("UPDATE_EDGE", map[string]any{"edgeId": identifier("edgeId"), "changes": changes}, "edgeId", "changes"),
+		operation("REMOVE_EDGE", map[string]any{"edgeId": identifier("edgeId")}, "edgeId"),
+		operation("ADD_REGION", map[string]any{"region": region}, "region"),
+		operation("UPDATE_REGION", map[string]any{"regionId": identifier("regionId"), "changes": changes}, "regionId", "changes"),
+		operation("REMOVE_REGION", map[string]any{"regionId": identifier("regionId")}, "regionId"),
+		operation("ADD_ANNOTATION", map[string]any{"annotation": annotation}, "annotation"),
+		operation("UPDATE_ANNOTATION", map[string]any{"annotationId": identifier("annotationId"), "changes": changes}, "annotationId", "changes"),
+		operation("REMOVE_ANNOTATION", map[string]any{"annotationId": identifier("annotationId")}, "annotationId"),
+		operation("MOVE_NODE", map[string]any{"nodeId": identifier("nodeId"), "position": position}, "nodeId", "position"),
+		operation("RESIZE_NODE", map[string]any{"nodeId": identifier("nodeId"), "size": size}, "nodeId", "size"),
+		operation("MOVE_REGION", map[string]any{"regionId": identifier("regionId"), "position": position}, "regionId", "position"),
+		operation("RESIZE_REGION", map[string]any{"regionId": identifier("regionId"), "size": size}, "regionId", "size"),
+		operation("COMPOSITE", map[string]any{"operations": map[string]any{"type": "array", "minItems": 1, "items": map[string]any{"$ref": "#/$defs/operation"}}}, "operations"),
+	}}
 }
