@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/olaysco/akitekt/apps/api/internal/ai"
 )
@@ -20,8 +21,12 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:    address,
-		Handler: ai.NewHandler(provider),
+		Addr:              address,
+		Handler:           ai.NewHandler(provider),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	log.Printf("Akitekt API listening on %s", address)
