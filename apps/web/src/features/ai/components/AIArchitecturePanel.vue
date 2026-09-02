@@ -38,6 +38,7 @@ async function submit() {
     <AIProposalReview
       v-if="proposal"
       :command="proposal"
+      :errors="errors"
       @apply="applyProposal"
       @discard="discardProposal"
     />

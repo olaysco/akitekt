@@ -3,6 +3,7 @@ import type { AIArchitectureCommand } from '../domain/ai-architecture-command'
 
 defineProps<{
   command: AIArchitectureCommand
+  errors?: string[]
 }>()
 
 defineEmits<{
@@ -27,6 +28,10 @@ defineEmits<{
         </li>
       </ul>
     </div>
+
+    <ul v-if="errors?.length" class="errors">
+      <li v-for="error in errors" :key="error">{{ error }}</li>
+    </ul>
 
     <div class="actions">
       <button class="secondary" type="button" @click="$emit('discard')">
@@ -87,6 +92,16 @@ ul {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 20px;
+}
+
+.errors {
+  margin: 16px 0 0;
+  padding: 9px 9px 9px 25px;
+  border-radius: 6px;
+  background: oklch(0.97 0.025 25);
+  color: oklch(0.46 0.16 25);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 button {
