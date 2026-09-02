@@ -25,7 +25,9 @@ export function createHTTPAIArchitectureProvider(
       })
 
       if (!response.ok) {
-        throw new Error('Unable to generate an architecture proposal.')
+        const message = (await response.text()).trim()
+
+        throw new Error(message || 'Unable to generate an architecture proposal.')
       }
 
       return response.json() as Promise<AIArchitectureResponse>
