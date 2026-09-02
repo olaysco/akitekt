@@ -15,10 +15,10 @@ Optionally select a model with `OPENAI_MODEL`; it defaults to `gpt-5.2`.
 Then start the web app from `apps/web`:
 
 ```sh
-npm run dev
+VITE_API_URL=http://127.0.0.1:18080 npm run dev
 ```
 
-Vite proxies `/api` requests to the local API server on port `8080`.
+`VITE_API_URL` sets the API origin for local development. When it is omitted, the web app uses the relative `/api` path for same-origin deployments; Vite proxies that path to port `8080` in development.
 
 ## AI architecture proposals
 

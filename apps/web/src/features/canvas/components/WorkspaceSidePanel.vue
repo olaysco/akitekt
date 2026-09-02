@@ -8,8 +8,9 @@ type WorkspaceTab = 'architect' | 'patterns' | 'load' | 'review'
 
 const activeTab = ref<WorkspaceTab>('architect')
 const architectureStore = useArchitectureStore()
+const apiBaseURL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
 const aiProvider = createHTTPAIArchitectureProvider({
-  endpoint: '/api/ai/architecture/proposals',
+  endpoint: `${apiBaseURL}/api/ai/architecture/proposals`,
 })
 </script>
 
