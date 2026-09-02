@@ -23,7 +23,10 @@ export async function proposeAIArchitecture(
   })
 
   const response = await options.provider.proposeArchitecture(request)
-  const validation = validateAIArchitectureCommand(response.command)
+  const validation = validateAIArchitectureCommand(
+    response.command,
+    options.architecture,
+  )
 
   if (!validation.valid) {
     return {

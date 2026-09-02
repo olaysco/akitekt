@@ -4,6 +4,7 @@ export type AICommandValidationResult =
 
 export function validateAIArchitectureCommand(
   command: unknown,
+  architecture?: Architecture,
 ): AICommandValidationResult {
   const errors: string[] = []
 
@@ -21,9 +22,140 @@ export function validateAIArchitectureCommand(
     })
   }
 
+  if (errors.length === 0 && architecture) {
+    const state = createReferenceState(architecture)
+
+    ;(command.operations as DocumentOperation[]).forEach((operation, index) => {
+      validateOperationReferences(operation, `Operation ${index + 1}`, state, errors)
+    })
+  }
+
   return errors.length === 0
     ? { valid: true }
     : { valid: false, errors }
+}
+
+type ReferenceState = {
+  nodeIds: Set<string>
+  edgeIds: Set<string>
+  regionIds: Set<string>
+  annotationIds: Set<string>
+  edgeNodes: Map<string, { sourceId: string; targetId: string }>
+}
+
+function createReferenceState(architecture: Architecture): ReferenceState {
+  return {
+    nodeIds: new Set(architecture.nodes.map((node) => node.id)),
+    edgeIds: new Set(architecture.edges.map((edge) => edge.id)),
+    regionIds: new Set(architecture.regions.map((region) => region.id)),
+    annotationIds: new Set(architecture.annotations.map((annotation) => annotation.id)),
+    edgeNodes: new Map(architecture.edges.map((edge) => [
+      edge.id,
+      { sourceId: edge.source.nodeId, targetId: edge.target.nodeId },
+    ])),
+  }
+}
+
+function validateOperationReferences(
+  operation: DocumentOperation,
+  label: string,
+  state: ReferenceState,
+  errors: string[],
+) {
+  switch (operation.type) {
+    case 'ADD_NODE':
+      if (state.nodeIds.has(operation.node.id)) {
+        errors.push(`${label} adds a node with an existing id.`)
+      }
+      if (operation.node.regionId && !state.regionIds.has(operation.node.regionId)) {
+        errors.push(`${label} references a missing region.`)
+      }
+      state.nodeIds.add(operation.node.id)
+      return
+    case 'UPDATE_NODE':
+      validateKnownId(state.nodeIds, operation.nodeId, 'node', label, errors)
+      if (operation.changes.regionId && !state.regionIds.has(operation.changes.regionId)) {
+        errors.push(`${label} references a missing region.`)
+      }
+      return
+    case 'REMOVE_NODE':
+      validateKnownId(state.nodeIds, operation.nodeId, 'node', label, errors)
+      state.nodeIds.delete(operation.nodeId)
+      for (const [edgeId, edge] of state.edgeNodes) {
+        if (edge.sourceId === operation.nodeId || edge.targetId === operation.nodeId) {
+          state.edgeIds.delete(edgeId)
+          state.edgeNodes.delete(edgeId)
+        }
+      }
+      return
+    case 'ADD_EDGE':
+      if (state.edgeIds.has(operation.edge.id)) {
+        errors.push(`${label} adds an edge with an existing id.`)
+      }
+      validateKnownId(state.nodeIds, operation.edge.source.nodeId, 'source node', label, errors)
+      validateKnownId(state.nodeIds, operation.edge.target.nodeId, 'target node', label, errors)
+      state.edgeIds.add(operation.edge.id)
+      state.edgeNodes.set(operation.edge.id, {
+        sourceId: operation.edge.source.nodeId,
+        targetId: operation.edge.target.nodeId,
+      })
+      return
+    case 'UPDATE_EDGE':
+    case 'REMOVE_EDGE':
+      validateKnownId(state.edgeIds, operation.edgeId, 'edge', label, errors)
+      if (operation.type === 'REMOVE_EDGE') {
+        state.edgeIds.delete(operation.edgeId)
+        state.edgeNodes.delete(operation.edgeId)
+      }
+      return
+    case 'ADD_REGION':
+      if (state.regionIds.has(operation.region.id)) {
+        errors.push(`${label} adds a region with an existing id.`)
+      }
+      if (operation.region.parentRegionId && !state.regionIds.has(operation.region.parentRegionId)) {
+        errors.push(`${label} references a missing parent region.`)
+      }
+      state.regionIds.add(operation.region.id)
+      return
+    case 'UPDATE_REGION':
+    case 'REMOVE_REGION':
+      validateKnownId(state.regionIds, operation.regionId, 'region', label, errors)
+      if (operation.type === 'REMOVE_REGION') state.regionIds.delete(operation.regionId)
+      return
+    case 'ADD_ANNOTATION':
+      if (state.annotationIds.has(operation.annotation.id)) {
+        errors.push(`${label} adds an annotation with an existing id.`)
+      }
+      state.annotationIds.add(operation.annotation.id)
+      return
+    case 'UPDATE_ANNOTATION':
+    case 'REMOVE_ANNOTATION':
+      validateKnownId(state.annotationIds, operation.annotationId, 'annotation', label, errors)
+      if (operation.type === 'REMOVE_ANNOTATION') state.annotationIds.delete(operation.annotationId)
+      return
+    case 'MOVE_NODE':
+    case 'RESIZE_NODE':
+      validateKnownId(state.nodeIds, operation.nodeId, 'node', label, errors)
+      return
+    case 'MOVE_REGION':
+    case 'RESIZE_REGION':
+      validateKnownId(state.regionIds, operation.regionId, 'region', label, errors)
+      return
+    case 'COMPOSITE':
+      operation.operations.forEach((child, index) => {
+        validateOperationReferences(child, `${label}.${index + 1}`, state, errors)
+      })
+  }
+}
+
+function validateKnownId(
+  ids: Set<string>,
+  id: string,
+  name: string,
+  label: string,
+  errors: string[],
+) {
+  if (!ids.has(id)) errors.push(`${label} references a missing ${name}.`)
 }
 
 function validateOperation(
@@ -218,3 +350,5 @@ function isFiniteNumber(value: unknown): value is number {
 function isPositiveNumber(value: unknown): value is number {
   return isFiniteNumber(value) && value > 0
 }
+import type { Architecture } from '../../architectures/domain/architecture'
+import type { DocumentOperation } from '../../architectures/domain/operation'

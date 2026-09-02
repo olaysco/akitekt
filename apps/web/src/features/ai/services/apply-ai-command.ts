@@ -4,7 +4,10 @@ import { validateAIArchitectureCommand } from './validate-ai-command'
 
 export function applyAIArchitectureCommand(command: AIArchitectureCommand) {
   const architectureStore = useArchitectureStore()
-  const validation = validateAIArchitectureCommand(command)
+  const validation = validateAIArchitectureCommand(
+    command,
+    architectureStore.architecture,
+  )
 
   if (!validation.valid) {
     return {
