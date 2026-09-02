@@ -1,4 +1,6 @@
 import type { Architecture } from '../../architectures/domain/architecture'
+import { applyOperation } from '../../architectures/operations/applyOperation'
+import { createAutoLayoutOperations } from '../../architectures/services/createAutoLayoutOperations'
 import type { AIArchitectureCommand } from '../domain/ai-architecture-command'
 import type { AIArchitectureProvider } from '../domain/ai-architecture-provider'
 import { createAIArchitectureRequest } from './create-ai-architecture-request'
@@ -35,8 +37,36 @@ export async function proposeAIArchitecture(
     }
   }
 
+  const proposedArchitecture = applyOperation(
+    options.architecture,
+    {
+      type: 'COMPOSITE',
+      operations: response.command.operations,
+    }
+  )
+
+  const command: AIArchitectureCommand = {
+    ...response.command,
+    operations: [
+      ...response.command.operations,
+      ...createAutoLayoutOperations(proposedArchitecture),
+    ],
+  }
+
+  const layoutValidation = validateAIArchitectureCommand(
+    command,
+    options.architecture,
+  )
+
+  if (!layoutValidation.valid) {
+  return {
+    proposed: false,
+    errors: layoutValidation.errors,
+  }
+}
+
   return {
     proposed: true,
-    command: response.command,
+    command: command,
   }
 }
