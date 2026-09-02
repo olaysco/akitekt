@@ -25,7 +25,15 @@ type ArchitectureProposalProvider interface {
 	) (ArchitectureProposalResponse, error)
 }
 
+type ProviderStatus interface {
+	IsConfigured() bool
+}
+
 type UnconfiguredProvider struct{}
+
+func (UnconfiguredProvider) IsConfigured() bool {
+	return false
+}
 
 func (UnconfiguredProvider) Propose(
 	context.Context,

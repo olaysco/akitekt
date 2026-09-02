@@ -102,3 +102,35 @@ func TestProposalRejectsLargeRequest(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusRequestEntityTooLarge, recorder.Code)
 	}
 }
+
+func TestReadyReportsUnconfiguredProvider(t *testing.T) {
+	handler := NewHandler(UnconfiguredProvider{})
+	request := httptest.NewRequest(http.MethodGet, "/ready", nil)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected status %d, got %d", http.StatusServiceUnavailable, recorder.Code)
+	}
+}
+
+func TestReadyReportsConfiguredProvider(t *testing.T) {
+	handler := NewHandler(configuredProvider{})
+	request := httptest.NewRequest(http.MethodGet, "/ready", nil)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+}
+
+type configuredProvider struct {
+	providerStub
+}
+
+func (configuredProvider) IsConfigured() bool {
+	return true
+}

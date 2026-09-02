@@ -12,9 +12,22 @@ const maxProposalRequestBytes = 1 << 20
 func NewHandler(provider ArchitectureProposalProvider) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handleHealth)
+	mux.HandleFunc("GET /ready", handleReady(provider))
 	mux.HandleFunc("POST /api/ai/architecture/proposals", handleProposal(provider))
 
 	return mux
+}
+
+func handleReady(provider ArchitectureProposalProvider) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		status, ok := provider.(ProviderStatus)
+		if !ok || !status.IsConfigured() {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unconfigured"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+	}
 }
 
 func handleHealth(w http.ResponseWriter, _ *http.Request) {

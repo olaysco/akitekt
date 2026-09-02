@@ -32,6 +32,10 @@ type OpenAIProvider struct {
 	client   *http.Client
 }
 
+func (provider *OpenAIProvider) IsConfigured() bool {
+	return provider != nil
+}
+
 type openAIResponseRequest struct {
 	Model        string             `json:"model"`
 	Instructions string             `json:"instructions"`
