@@ -4,8 +4,7 @@
       <h1>Describe your system.</h1>
 
       <p>
-        Write it the way you would explain it to another engineer. I will build the graph, and you can run it, break it and
-        compare it from there.
+        Write it the way you would explain it to another engineer, the system will build the graph and you can run it.
       </p>
 
       <div class="empty-state-prompt">

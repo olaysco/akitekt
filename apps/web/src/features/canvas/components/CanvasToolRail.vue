@@ -231,7 +231,7 @@ defineExpose({
 .tool-system {
     position: absolute;
     left: 14px;
-    top: 64px;
+    top: 14px;
     z-index: 30;
 
     font-family:

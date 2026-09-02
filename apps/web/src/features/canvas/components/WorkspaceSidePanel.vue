@@ -147,7 +147,7 @@ const concerns = computed<Concern[]>(() => {
       </div>
 
       <p class="tab-note">
-        Patterns are not articles. Each one loads onto this canvas as a runnable architecture with a scenario attached.
+        Each one loads onto this canvas as a runnable architecture with a scenario attached.
       </p>
     </template>
 
@@ -245,7 +245,7 @@ const concerns = computed<Concern[]>(() => {
 <style scoped>
 .workspace-side-panel {
   position: absolute;
-  top: 64px;
+  top: 14px;
   right: 14px;
   bottom: 14px;
   z-index: 32;
