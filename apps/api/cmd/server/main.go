@@ -14,9 +14,14 @@ func main() {
 		address = ":8080"
 	}
 
+	provider, err := ai.NewOpenAIProviderFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	server := &http.Server{
 		Addr:    address,
-		Handler: ai.NewHandler(ai.UnconfiguredProvider{}),
+		Handler: ai.NewHandler(provider),
 	}
 
 	log.Printf("Akitekt API listening on %s", address)
