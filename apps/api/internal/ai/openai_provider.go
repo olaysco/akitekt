@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 const (
 	defaultOpenAIModel    = "gpt-5.2"
 	defaultOpenAIEndpoint = "https://api.openai.com/v1/responses"
+	openAIRequestTimeout  = 45 * time.Second
 )
 
 type OpenAIProviderConfig struct {
@@ -100,6 +102,9 @@ func (provider *OpenAIProvider) Propose(
 	ctx context.Context,
 	request ArchitectureProposalRequest,
 ) (ArchitectureProposalResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, openAIRequestTimeout)
+	defer cancel()
+
 	payload, err := provider.requestPayload(request)
 	if err != nil {
 		return ArchitectureProposalResponse{}, fmt.Errorf("create OpenAI request: %w", err)
