@@ -32,6 +32,10 @@ func TestOpenAIProviderProposesCommand(t *testing.T) {
 			t.Fatal("expected architecture data boundary in instructions")
 		}
 
+		if !strings.Contains(payload.Instructions, "metadata and behavior are always required") {
+			t.Fatal("expected operation shape instructions")
+		}
+
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"output_text": `{"id":"request-1","message":"Add a queue","operations":[{"type":"ADD_NODE"}]}`,
 		})
