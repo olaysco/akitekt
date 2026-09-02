@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AIArchitectureCommand } from '../domain/ai-architecture-command'
+import type { DocumentOperation } from '../../architectures/domain/operation'
 
 defineProps<{
   command: AIArchitectureCommand
@@ -10,6 +11,37 @@ defineEmits<{
   apply: []
   discard: []
 }>()
+
+function operationLabel(operation: DocumentOperation) {
+  switch (operation.type) {
+    case 'ADD_NODE':
+      return operation.node.name
+    case 'ADD_EDGE':
+      return `${operation.edge.source.nodeId} → ${operation.edge.target.nodeId}`
+    case 'ADD_REGION':
+      return operation.region.name
+    case 'ADD_ANNOTATION':
+      return operation.annotation.text
+    case 'COMPOSITE':
+      return `${operation.operations.length} nested operations`
+    case 'UPDATE_NODE':
+    case 'REMOVE_NODE':
+    case 'MOVE_NODE':
+    case 'RESIZE_NODE':
+      return operation.nodeId
+    case 'UPDATE_EDGE':
+    case 'REMOVE_EDGE':
+      return operation.edgeId
+    case 'UPDATE_REGION':
+    case 'REMOVE_REGION':
+    case 'MOVE_REGION':
+    case 'RESIZE_REGION':
+      return operation.regionId
+    case 'UPDATE_ANNOTATION':
+    case 'REMOVE_ANNOTATION':
+      return operation.annotationId
+  }
+}
 </script>
 
 <template>
@@ -19,6 +51,16 @@ defineEmits<{
     <p class="operation-count">
       {{ command.operations.length }} operation{{ command.operations.length === 1 ? '' : 's' }} ready to review
     </p>
+
+    <div class="operations">
+      <p class="section-label">Planned changes</p>
+      <ul>
+        <li v-for="operation in command.operations" :key="operation.type + operationLabel(operation)">
+          <strong>{{ operation.type }}</strong>
+          <span>{{ operationLabel(operation) }}</span>
+        </li>
+      </ul>
+    </div>
 
     <div v-if="command.assumptions?.length" class="assumptions">
       <p class="section-label">Assumptions</p>
@@ -79,12 +121,41 @@ h2 {
   border-top: 1px solid oklch(0.93 0.006 258);
 }
 
+.operations {
+  margin-top: 18px;
+}
+
 ul {
   margin: 8px 0 0;
   padding-left: 17px;
   color: oklch(0.4 0.014 258);
   font-size: 11px;
   line-height: 1.5;
+}
+
+.operations ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.operations li {
+  display: flex;
+  gap: 7px;
+  padding: 5px 0;
+  border-bottom: 1px solid oklch(0.95 0.004 258);
+}
+
+.operations strong {
+  color: oklch(0.44 0.19 258);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.operations span {
+  overflow: hidden;
+  color: oklch(0.42 0.014 258);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actions {
