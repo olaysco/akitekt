@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import AIArchitecturePanel from '../../ai/components/AIArchitecturePanel.vue'
+import { createLocalAIArchitectureProvider } from '../../ai/services/local-ai-architectecture-provider'
 import { createHTTPAIArchitectureProvider } from '../../ai/services/create-http-ai-architecture-provider'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 import { patternGroups } from '../../patterns/domain/pattern'
@@ -27,9 +28,17 @@ type Concern = {
 
 const activeTab = ref<WorkspaceTab>('architect')
 const architectureStore = useArchitectureStore()
-const aiProvider = createHTTPAIArchitectureProvider({
-  endpoint: '/api/ai/architecture/proposals',
-})
+
+const getAIProvider = (type: string) => {
+  switch (type) {
+    case "remote":
+      return createHTTPAIArchitectureProvider({endpoint: '/api/ai/architecture/proposals' })
+    default:
+      return createLocalAIArchitectureProvider()
+  }
+}
+
+const provider = getAIProvider("local") 
 
 const tabs: { id: WorkspaceTab; label: string }[] = [
   { id: 'architect', label: 'Architect' },
@@ -123,7 +132,7 @@ const concerns = computed<Concern[]>(() => {
     </nav>
 
     <template v-if="activeTab === 'architect'">
-      <AIArchitecturePanel :architecture="architectureStore.architecture" :provider="aiProvider" />
+      <AIArchitecturePanel :architecture="architectureStore.architecture" :provider="provider" />
     </template>
 
     <template v-else-if="activeTab === 'patterns'">
