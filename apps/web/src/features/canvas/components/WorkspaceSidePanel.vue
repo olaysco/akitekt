@@ -27,9 +27,8 @@ type Concern = {
 
 const activeTab = ref<WorkspaceTab>('architect')
 const architectureStore = useArchitectureStore()
-const apiBaseURL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? ''
 const aiProvider = createHTTPAIArchitectureProvider({
-  endpoint: `${apiBaseURL}/api/ai/architecture/proposals`,
+  endpoint: '/api/ai/architecture/proposals',
 })
 
 const tabs: { id: WorkspaceTab; label: string }[] = [
