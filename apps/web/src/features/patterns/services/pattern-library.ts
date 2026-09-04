@@ -1,4 +1,4 @@
-import type { Pattern, PatternGroup, RunnablePattern } from '../domain/pattern'
+import type { Lesson, Pattern, PatternGroup } from '../domain/pattern'
 
 const declarations = import.meta.glob('../../../patterns/*.json', {
   eager: true,
@@ -11,20 +11,19 @@ function isPattern(value: unknown): value is Pattern {
   const pattern = value as Partial<Pattern>
 
   return (
-    (pattern.status === 'draft' || pattern.status === 'runnable' || pattern.status === 'lesson')
+    pattern.status === 'lesson'
   )
 }
 
-function isRunnablePattern(pattern: Pattern): pattern is RunnablePattern {
-  const runnable = pattern as Partial<RunnablePattern>
+function isLesson(pattern: Pattern): pattern is Lesson {
+  const lesson = pattern as Partial<Lesson>
 
   return (
-    pattern.status === 'runnable' &&
-    typeof runnable.description === 'string' &&
-    Boolean(runnable.scenario) &&
-    Array.isArray(runnable.template?.regions) &&
-    Array.isArray(runnable.template?.nodes) &&
-    Array.isArray(runnable.template?.edges)
+    typeof lesson.description === 'string' &&
+    Boolean(lesson.scenario) &&
+    Array.isArray(lesson.template?.regions) &&
+    Array.isArray(lesson.template?.nodes) &&
+    Array.isArray(lesson.template?.edges)
   )
 }
 
@@ -36,22 +35,21 @@ export const patterns = Object.values(declarations)
   .filter(isPattern)
   .sort((left, right) => left.name.localeCompare(right.name))
 
-export const runnablePatterns = patterns.filter(isRunnablePattern)
+export const lessons = patterns.filter(isLesson)
 
-export const patternGroups = patterns
-  .filter((pattern) => pattern.status !== 'runnable')
-  .reduce<PatternGroup[]>((groups, pattern) => {
-    const existing = groups.find((group) => group.title === pattern.group)
+export const lessonGroups = lessons
+  .reduce<PatternGroup[]>((groups, lesson) => {
+    const existing = groups.find((group) => group.title === lesson.group)
 
     if (existing) {
-      existing.patterns.push(pattern)
+      existing.patterns.push(lesson)
       return groups
     }
 
     groups.push({
-      id: groupId(pattern.group),
-      title: pattern.group,
-      patterns: [pattern],
+      id: groupId(lesson.group),
+      title: lesson.group,
+      patterns: [lesson],
     })
     return groups
   }, [])

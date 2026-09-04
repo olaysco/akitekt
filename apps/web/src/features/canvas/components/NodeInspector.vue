@@ -3,6 +3,8 @@ import { computed } from 'vue'
 
 import type { NodeType } from '../../architectures/domain/node'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
+import { injectionOptions, type InjectionKind } from '../../simulation/services/create-execution-trace'
+import { useSimulationStore } from '../../simulation/stores/simulation.store'
 
 type Props = {
     nodeId: string | null
@@ -11,12 +13,30 @@ type Props = {
 const props = defineProps<Props>()
 
 const architectureStore = useArchitectureStore()
+const simulationStore = useSimulationStore()
 
 const node = computed(() =>
     architectureStore.architecture.nodes.find(
         (item) => item.id === props.nodeId,
     ),
 )
+
+function isInjected(kind: InjectionKind): boolean {
+    return (
+        simulationStore.injection?.nodeId === props.nodeId &&
+        simulationStore.injection.kind === kind
+    )
+}
+
+function pickInjection(kind: InjectionKind) {
+    if (!node.value) return
+
+    simulationStore.setInjection(node.value.id, kind)
+}
+
+function runWithInjection() {
+    simulationStore.run(architectureStore.architecture)
+}
 
 function updateName(name: string) {
     if (!node.value) return
@@ -213,10 +233,105 @@ function removeNode() {
                     " />
             </label>
         </div>
+
+        <div class="injection">
+            <span class="eyebrow">Simulate failure</span>
+
+            <button v-for="option in injectionOptions" :key="option.kind" type="button" class="injection-row"
+                :class="{ picked: isInjected(option.kind) }" @click="pickInjection(option.kind)">
+                <span class="radio" />
+
+                <span>
+                    {{ option.label }}
+                </span>
+            </button>
+
+            <button type="button" class="injection-run" @click="runWithInjection">
+                Run with this scenario
+            </button>
+        </div>
     </div>
 </template>
 
 <style scoped>
+.injection {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    padding: 12px 13px 14px;
+
+    border-top: 1px solid oklch(0.93 0.006 258);
+}
+
+.injection .eyebrow {
+    margin-bottom: 2px;
+}
+
+.injection-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 6px 8px;
+
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+
+    color: oklch(0.34 0.014 258);
+    font-family: inherit;
+    font-size: 11.5px;
+    text-align: left;
+
+    cursor: pointer;
+}
+
+.injection-row:hover {
+    background: oklch(0.975 0.004 258);
+}
+
+.injection-row.picked {
+    border-color: oklch(0.58 0.21 27 / 0.30);
+    background: oklch(0.58 0.21 27 / 0.07);
+    color: oklch(0.42 0.014 258);
+}
+
+.radio {
+    width: 9px;
+    height: 9px;
+
+    flex: none;
+
+    border: 1px solid oklch(0.78 0.01 258);
+    border-radius: 50%;
+}
+
+.injection-row.picked .radio {
+    border-color: oklch(0.58 0.21 27);
+    background: oklch(0.58 0.21 27);
+}
+
+.injection-run {
+    margin-top: 5px;
+
+    padding: 8px 10px;
+
+    background: oklch(0.962 0.006 258);
+    border: 1px solid oklch(0.87 0.01 258);
+    border-radius: 7px;
+
+    color: oklch(0.27 0.015 258);
+    font-family: inherit;
+    font-size: 11.5px;
+
+    cursor: pointer;
+}
+
+.injection-run:hover {
+    border-color: oklch(0.66 0.16 258);
+}
+
 .node-inspector {
     width: 100%;
     min-height: 100%;

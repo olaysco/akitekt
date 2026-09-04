@@ -3,6 +3,7 @@ import { MarkerType } from '@vue-flow/core'
 import type { Edge, Node } from '@vue-flow/core'
 import type { AddComponentPayload } from '../components/CanvasToolRail.vue'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store.ts'
+import { useSimulationStore } from '../../simulation/stores/simulation.store'
 
 type RegionDraft = {
     start: { x: number; y: number }
@@ -19,13 +20,23 @@ type Options = {
     getRegionBounds: (draft: RegionDraft) => { x: number; y: number; width: number; height: number }
 }
 
+const statusStroke: Record<string, string> = {
+    ok: 'oklch(0.58 0.15 152)',
+    warn: 'oklch(0.68 0.16 68)',
+    fail: 'oklch(0.58 0.21 27)',
+}
+
 export function useCanvasGraph(options: Options) {
     const architectureStore = useArchitectureStore()
+    const simulationStore = useSimulationStore()
 
     const nodes = computed<Node[]>(() => {
         const architectureNodes = architectureStore.architecture.nodes.map((node): Node => ({
             id: node.id,
             position: node.position,
+            class: simulationStore.nodeStatus[node.id]
+                ? `node-status-${simulationStore.nodeStatus[node.id]}`
+                : undefined,
             style: node.size ? {
                 width: `${node.size.width}px`,
                 height: `${node.size.height}px`,
@@ -140,6 +151,12 @@ export function useCanvasGraph(options: Options) {
         architectureStore.architecture.edges.map((edge) => {
             const selected = options.selectedEdgeId.value === edge.id
             const dashed = edge.type === 'async' || edge.type === 'event' || edge.type === 'stream'
+            const status = simulationStore.edgeStatus[edge.id]
+            const stroke = status
+                ? statusStroke[status]
+                : selected
+                    ? 'oklch(0.60 0.19 258)'
+                    : 'oklch(0.70 0.012 258)'
 
             return {
                 id: edge.id,
@@ -150,16 +167,17 @@ export function useCanvasGraph(options: Options) {
                     edgeType: edge.type,
                     protocol: edge.protocol,
                 },
+                animated: status !== undefined && simulationStore.running,
                 style: {
-                    stroke: selected ? 'oklch(0.60 0.19 258)' : 'oklch(0.70 0.012 258)',
-                    strokeWidth: selected ? 2 : 1.4,
+                    stroke,
+                    strokeWidth: status || selected ? 2 : 1.4,
                     strokeDasharray: dashed ? '5 4' : undefined,
                 },
                 markerEnd: {
                     type: MarkerType.ArrowClosed,
                     width: 7,
                     height: 7,
-                    color: selected ? 'oklch(0.60 0.19 258)' : 'oklch(0.70 0.012 258)',
+                    color: stroke,
                 },
             }
         }),

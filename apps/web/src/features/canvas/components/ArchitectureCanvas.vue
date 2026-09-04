@@ -11,6 +11,7 @@ import { Background } from '@vue-flow/background'
 import CanvasRegion from './CanvasRegion.vue'
 import CanvasToolRail from './CanvasToolRail.vue'
 import CanvasAnnotation from './CanvasAnnotation.vue'
+import CanvasStatusBar from './CanvasStatusBar.vue'
 import WorkspaceSidePanel from './WorkspaceSidePanel.vue'
 import ContextualSidePanel from './ContextualSidePanel.vue'
 import ArchitectureNode from '../nodes/ArchitectureNode.vue'
@@ -23,7 +24,7 @@ import { useCanvasInteractions } from '../composables/useCanvasInteractions'
 import { useCanvasSelection } from '../../canvas/composables/useCanvasSelection'
 
 const regionToolActive = ref(false)
-const { fitView, screenToFlowCoordinate } = useVueFlow()
+const { fitView, viewport, screenToFlowCoordinate } = useVueFlow()
 const editingAnnotationId = ref<string | null>(null)
 const toolRail = ref<InstanceType<typeof CanvasToolRail> | null>(null)
 
@@ -176,6 +177,8 @@ async function focusPatternNodes(nodeIds: string[]) {
 
     <button class="temporary-delete" @click="deleteSelection">Delete selected</button>
 
+    <CanvasStatusBar :zoom="viewport.zoom" @fit="fitView({ padding: 0.2, duration: 250 })" />
+
     <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"
       @region-tool="handleRegionTool" />
 
@@ -200,6 +203,21 @@ async function focusPatternNodes(nodeIds: string[]) {
 .architecture-canvas :deep(.vue-flow) {
   width: 100%;
   height: 100%;
+}
+
+.architecture-canvas :deep(.node-status-ok .architecture-node) {
+  border-color: oklch(0.58 0.15 152);
+  box-shadow: 0 0 0 3px oklch(0.58 0.15 152 / 0.14);
+}
+
+.architecture-canvas :deep(.node-status-warn .architecture-node) {
+  border-color: oklch(0.68 0.16 68);
+  box-shadow: 0 0 0 3px oklch(0.68 0.16 68 / 0.14);
+}
+
+.architecture-canvas :deep(.node-status-fail .architecture-node) {
+  border-color: oklch(0.58 0.21 27);
+  box-shadow: 0 0 0 3px oklch(0.58 0.21 27 / 0.16);
 }
 
 .region-draw-layer {

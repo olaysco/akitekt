@@ -44,7 +44,7 @@ defineProps<{
 .contextual-side-panel {
   position: absolute;
 
-  top: 64px;
+  top: 14px;
   right: 14px;
   bottom: 14px;
 

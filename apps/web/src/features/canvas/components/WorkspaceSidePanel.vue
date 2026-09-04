@@ -4,29 +4,12 @@ import AIArchitecturePanel from '../../ai/components/AIArchitecturePanel.vue'
 import { createLocalAIArchitectureProvider } from '../../ai/services/local-ai-architectecture-provider'
 import { createHTTPAIArchitectureProvider } from '../../ai/services/create-http-ai-architecture-provider'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
-import type { RunnablePattern } from '../../patterns/domain/pattern'
-import { createPatternAppendPlan } from '../../patterns/services/create-pattern-load-operation'
-import { patternGroups, runnablePatterns } from '../../patterns/services/pattern-library'
+import type { Lesson } from '../../patterns/domain/pattern'
+import { createLessonArchitecture } from '../../patterns/services/create-lesson-architecture'
+import { lessonGroups } from '../../patterns/services/pattern-library'
+import { simulateArchitecture } from '../../simulation/services/simulate-architecture'
 
 type WorkspaceTab = 'architect' | 'patterns' | 'load' | 'review'
-
-type Tone = 'ok' | 'warn' | 'fail'
-
-type CapacityRow = {
-  id: string
-  label: string
-  value: string
-  tone: Tone
-}
-
-type Severity = 'high' | 'med' | 'low'
-
-type Concern = {
-  id: string
-  severity: Severity
-  component: string
-  text: string
-}
 
 const activeTab = ref<WorkspaceTab>('architect')
 const architectureStore = useArchitectureStore()
@@ -49,7 +32,6 @@ const tabs: { id: WorkspaceTab; label: string }[] = [
   { id: 'architect', label: 'Architect' },
   { id: 'patterns', label: 'Patterns' },
   { id: 'load', label: 'Load' },
-  { id: 'review', label: 'Review' },
 ]
 
 const offeredLoad = ref(60000)
@@ -59,14 +41,16 @@ const architecture = computed(
   () => architectureStore.architecture,
 )
 
-function openPatternExample(pattern: RunnablePattern) {
-  const plan = createPatternAppendPlan(
-    architectureStore.architecture,
-    pattern,
-  )
+function openLesson(lesson: Lesson) {
+  const architecture = createLessonArchitecture(lesson)
 
-  architectureStore.execute(plan.operation)
-  emit('focusNodes', plan.nodeIds)
+  architectureStore.openDocument(architecture)
+  offeredLoad.value = lesson.scenario.offeredLoadPerMinute
+  if (lesson.scenario.consumerInstances !== undefined) {
+    consumerInstances.value = lesson.scenario.consumerInstances
+  }
+  activeTab.value = 'load'
+  emit('focusNodes', architecture.nodes.map((node) => node.id))
 }
 
 function formatPerMinute(value: number): string {
@@ -83,59 +67,13 @@ function formatPerMinute(value: number): string {
   } k / min`
 }
 
-function ceilingPerMinute(
-  requestsPerSecond: number | undefined,
-  instances: number,
-): number | null {
-  if (
-    requestsPerSecond === undefined ||
-    !Number.isFinite(requestsPerSecond)
-  ) {
-    return null
-  }
+const simulation = computed(() => simulateArchitecture({
+  architecture: architecture.value,
+  offeredLoadPerMinute: offeredLoad.value,
+  workerInstances: consumerInstances.value,
+}))
 
-  return requestsPerSecond * 60 * instances
-}
-
-const capacityRows = computed<CapacityRow[]>(() => {
-  const rows: CapacityRow[] = []
-
-  for (const node of architecture.value.nodes) {
-    const isConsumer = node.type === 'worker'
-
-    const ceiling = ceilingPerMinute(
-      node.behavior.capacity?.requestsPerSecond,
-      isConsumer
-        ? consumerInstances.value
-        : node.metadata.instances ?? 1,
-    )
-
-    if (ceiling === null) continue
-
-    rows.push({
-      id: node.id,
-      label: isConsumer
-        ? `${node.name} capacity`
-        : `${node.name} ceiling`,
-      value: formatPerMinute(ceiling),
-      tone: offeredLoad.value > ceiling ? 'fail' : 'ok',
-    })
-  }
-
-  return rows
-})
-
-const concerns = computed<Concern[]>(() => {
-  const found: Concern[] = []
-
-  const order: Severity[] = ['high', 'med', 'low']
-
-  return found.sort(
-    (a, b) =>
-      order.indexOf(a.severity) -
-      order.indexOf(b.severity),
-  )
-})
+const concerns = computed(() => simulation.value.concerns)
 </script>
 
 <template>
@@ -152,45 +90,26 @@ const concerns = computed<Concern[]>(() => {
 
     <template v-else-if="activeTab === 'patterns'">
       <div class="tab-body scrollable pattern-list">
-        <div class="group-title">
-          Runnable patterns
-        </div>
-
-        <div v-for="pattern in runnablePatterns" :key="pattern.id" class="runnable-pattern">
-          <div>
-            <div class="pattern-name">
-              {{ pattern.name }}
-            </div>
-
-            <p class="pattern-description">
-              {{ pattern.description }}
-            </p>
-          </div>
-
-          <button type="button" @click="openPatternExample(pattern)">
-            Open on canvas
-          </button>
-        </div>
-
-        <template v-for="group in patternGroups" :key="group.id">
+        <template v-for="group in lessonGroups" :key="group.id">
           <div class="group-title">
             {{ group.title }}
           </div>
 
-          <div v-for="pattern in group.patterns" :key="pattern.id" class="pattern-row">
+          <button v-for="lesson in group.patterns" :key="lesson.id" type="button" class="pattern-row"
+            @click="openLesson(lesson as Lesson)">
             <span class="pattern-name">
-              {{ pattern.name }}
+              {{ lesson.name }}
             </span>
 
-            <span class="tag" :class="pattern.status">
-              {{ pattern.status }}
+            <span class="tag" :class="lesson.status">
+              {{ lesson.status }}
             </span>
-          </div>
+          </button>
         </template>
       </div>
 
       <p class="tab-note">
-        Open a pattern below your existing work and explore its starting simulation scenario.
+        Lessons are not articles. Each one opens on its own canvas as a runnable architecture with a scenario attached.
       </p>
     </template>
 
@@ -230,20 +149,25 @@ const concerns = computed<Concern[]>(() => {
             derived capacity
           </div>
 
-          <div v-for="row in capacityRows" :key="row.id" class="derived-row">
+          <div v-for="row in simulation.capacities" :key="row.nodeId" class="derived-row">
             <span class="derived-label">
               {{ row.label }}
             </span>
 
             <span class="pill" :class="row.tone">
-              {{ row.value }}
+              {{ formatPerMinute(row.capacityPerMinute) }} · {{ Math.round(row.utilization * 100) }}%
             </span>
           </div>
 
-          <p v-if="!capacityRows.length" class="derived-empty">
+          <p v-if="!simulation.capacities.length" class="derived-empty">
             No component declares a capacity yet. Set requests per second on a component to derive its ceiling.
           </p>
         </div>
+
+        <p v-if="simulation.bottleneck" class="tab-note inline">
+          Current bottleneck: {{ simulation.bottleneck.label }} at
+          {{ Math.round(simulation.bottleneck.utilization * 100) }}% utilization.
+        </p>
 
         <p class="tab-note inline">
           An architecture reasoning simulator, not a load test. Capacity comes from properties on the graph.
@@ -251,7 +175,7 @@ const concerns = computed<Concern[]>(() => {
       </div>
     </template>
 
-    <template v-else>
+    <template v-else-if="activeTab === 'review'">
       <div class="tab-body scrollable">
         <div class="concerns-header">
           <span class="eyebrow">Concerns</span>
@@ -363,36 +287,6 @@ const concerns = computed<Concern[]>(() => {
   text-wrap: pretty;
 }
 
-.runnable-pattern {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 13px;
-  border-bottom: 1px solid oklch(0.94 0.006 258);
-}
-
-.pattern-description {
-  max-width: 220px;
-  margin: 4px 0 0;
-  color: oklch(0.52 0.014 258);
-  font-size: 10.5px;
-  line-height: 1.45;
-}
-
-.runnable-pattern button {
-  flex: none;
-  padding: 5px 8px;
-  border: 1px solid oklch(0.72 0.12 258);
-  border-radius: 6px;
-  background: oklch(0.97 0.025 258);
-  color: oklch(0.44 0.19 258);
-  font: inherit;
-  font-size: 10.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .tab-note.inline {
   padding: 0;
   border-top: 0;
@@ -411,12 +305,22 @@ const concerns = computed<Concern[]>(() => {
 }
 
 .pattern-row {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 13px;
-  border-left: 2px solid transparent;
+  padding: 9px 13px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid oklch(0.955 0.005 258);
   color: oklch(0.42 0.014 258);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pattern-row:hover {
+  background: oklch(0.975 0.004 258);
 }
 
 .pattern-name {
@@ -435,7 +339,6 @@ const concerns = computed<Concern[]>(() => {
   text-transform: uppercase;
 }
 
-.tag.runnable,
 .tag.lesson {
   background: oklch(0.94 0.04 258);
   color: oklch(0.44 0.19 258);

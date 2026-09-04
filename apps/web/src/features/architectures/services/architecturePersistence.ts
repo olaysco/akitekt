@@ -1,6 +1,8 @@
 import type { Architecture } from '../domain/architecture'
 
-const STORAGE_KEY = 'akitekt:architecture'
+const STORAGE_KEY = 'akitekt:documents'
+
+const LEGACY_STORAGE_KEY = 'akitekt:architecture'
 
 const CURRENT_SCHEMA_VERSION = 1
 
@@ -25,35 +27,42 @@ function isCompatibleArchitecture(
     )
 }
 
-export function saveArchitecture(
-    architecture: Architecture,
-) {
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(architecture),
-    )
-}
-
-export function loadArchitecture(): Architecture | null {
-    const stored = localStorage.getItem(STORAGE_KEY)
+function parseStored(key: string): unknown {
+    const stored = localStorage.getItem(key)
 
     if (!stored) {
         return null
     }
 
     try {
-        const parsed: unknown = JSON.parse(stored)
-
-        if (!isCompatibleArchitecture(parsed)) {
-            return null
-        }
-
-        return parsed
+        return JSON.parse(stored)
     } catch {
         return null
     }
 }
 
-export function clearSavedArchitecture() {
+export function saveArchitectures(
+    architectures: Architecture[],
+) {
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(architectures),
+    )
+}
+
+export function loadArchitectures(): Architecture[] {
+    const parsed = parseStored(STORAGE_KEY)
+
+    if (Array.isArray(parsed)) {
+        return parsed.filter(isCompatibleArchitecture)
+    }
+
+    const legacy = parseStored(LEGACY_STORAGE_KEY)
+
+    return isCompatibleArchitecture(legacy) ? [legacy] : []
+}
+
+export function clearSavedArchitectures() {
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
 }

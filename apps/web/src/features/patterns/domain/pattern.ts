@@ -2,7 +2,7 @@ import type { ArchitectureEdge } from '../../architectures/domain/edge'
 import type { ArchitectureNode } from '../../architectures/domain/node'
 import type { ArchitectureRegion } from '../../architectures/domain/region'
 
-export type PatternStatus = 'draft' | 'runnable' | 'lesson'
+export type PatternStatus = 'lesson'
 
 export type PatternScenario = {
   offeredLoadPerMinute: number
@@ -25,8 +25,8 @@ export type Pattern = {
   description?: string
 }
 
-export type RunnablePattern = Pattern & {
-  status: 'runnable'
+export type Lesson = Pattern & {
+  status: 'lesson'
   description: string
   scenario: PatternScenario
   template: PatternTemplate

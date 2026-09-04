@@ -6,11 +6,18 @@ import type { DocumentOperation } from '../domain/operation'
 
 import { applyOperation } from '../operations/applyOperation'
 import { invertOperation } from '../operations/invertOperation'
-import { loadArchitecture, saveArchitecture } from '../services/architecturePersistence'
+import { loadArchitectures, saveArchitectures } from '../services/architecturePersistence'
 
 type HistoryEntry = {
     operation: DocumentOperation
     inverse: DocumentOperation
+}
+
+type ArchitectureDocument = {
+    id: string
+    architecture: Architecture
+    undoStack: HistoryEntry[]
+    redoStack: HistoryEntry[]
 }
 
 function createEmptyArchitecture(): Architecture {
@@ -31,111 +38,221 @@ function createEmptyArchitecture(): Architecture {
     }
 }
 
-const savedArchitecture = loadArchitecture()
+function createDocument(
+    architecture: Architecture,
+): ArchitectureDocument {
+    return {
+        id: architecture.id,
+        architecture,
+        undoStack: [],
+        redoStack: [],
+    }
+}
+
+const savedArchitectures = loadArchitectures()
 
 export const useArchitectureStore = defineStore(
     'architecture',
     () => {
-        const architecture = ref<Architecture>(
-            savedArchitecture ?? createEmptyArchitecture(),
+        const documents = ref<ArchitectureDocument[]>(
+            savedArchitectures.length > 0
+                ? savedArchitectures.map(createDocument)
+                : [createDocument(createEmptyArchitecture())],
         )
 
-        const undoStack = ref<HistoryEntry[]>([])
-        const redoStack = ref<HistoryEntry[]>([])
+        const activeDocumentId = ref<string>(
+            documents.value[0].id,
+        )
+
+        const activeDocument = computed(
+            () =>
+                documents.value.find(
+                    (document) => document.id === activeDocumentId.value,
+                ) ?? documents.value[0],
+        )
+
+        const architecture = computed(
+            () => activeDocument.value.architecture,
+        )
+
+        const tabs = computed(() =>
+            documents.value.map((document) => ({
+                id: document.id,
+                name: document.architecture.name,
+            })),
+        )
 
         const canUndo = computed(
-            () => undoStack.value.length > 0,
+            () => activeDocument.value.undoStack.length > 0,
         )
 
         const canRedo = computed(
-            () => redoStack.value.length > 0,
+            () => activeDocument.value.redoStack.length > 0,
         )
 
+        function persist(): void {
+            saveArchitectures(
+                documents.value.map(
+                    (document) => document.architecture,
+                ),
+            )
+        }
+
         function execute( operation: DocumentOperation ): void {
-            const architectureBefore =
-                architecture.value
+            const document = activeDocument.value
 
             const inverse = invertOperation(
-                architectureBefore,
+                document.architecture,
                 operation,
             )
 
             const nextArchitecture = applyOperation(
-                architectureBefore,
+                document.architecture,
                 operation,
             )
 
-            architecture.value = { ...nextArchitecture,
+            document.architecture = { ...nextArchitecture,
                 metadata: {
                     ...nextArchitecture.metadata,
                     updatedAt: new Date().toISOString(),
                 },
             }
 
-            undoStack.value.push({
+            document.undoStack.push({
                 operation,
                 inverse,
             })
 
-            redoStack.value = []
+            document.redoStack = []
 
-            saveArchitecture(architecture.value)
+            persist()
         }
 
         function undo(): void {
-            const entry = undoStack.value.pop()
+            const document = activeDocument.value
+            const entry = document.undoStack.pop()
 
             if (!entry) {
                 return
             }
 
-            architecture.value = applyOperation(
-                architecture.value,
+            document.architecture = applyOperation(
+                document.architecture,
                 entry.inverse,
             )
 
-            redoStack.value.push(entry)
-            saveArchitecture(architecture.value)
+            document.redoStack.push(entry)
+            persist()
         }
 
         function redo(): void {
-            const entry = redoStack.value.pop()
+            const document = activeDocument.value
+            const entry = document.redoStack.pop()
 
             if (!entry) {
                 return
             }
 
-            architecture.value = applyOperation(
-                architecture.value,
+            document.architecture = applyOperation(
+                document.architecture,
                 entry.operation,
             )
 
-            undoStack.value.push(entry)
-            saveArchitecture(architecture.value)
+            document.undoStack.push(entry)
+            persist()
+        }
+
+        function openDocument(
+            nextArchitecture: Architecture,
+        ): void {
+            documents.value.push(
+                createDocument(nextArchitecture),
+            )
+
+            activateDocument(nextArchitecture.id)
+            persist()
+        }
+
+        function openBlankDocument(): void {
+            openDocument(createEmptyArchitecture())
+        }
+
+        function renameDocument(id: string, name: string): void {
+            const document = documents.value.find(
+                (item) => item.id === id,
+            )
+
+            const trimmed = name.trim()
+
+            if (!document || !trimmed) {
+                return
+            }
+
+            document.architecture = {
+                ...document.architecture,
+                name: trimmed,
+                metadata: {
+                    ...document.architecture.metadata,
+                    updatedAt: new Date().toISOString(),
+                },
+            }
+
+            persist()
+        }
+
+        function activateDocument(id: string): void {
+            activeDocumentId.value = id
+        }
+
+        function closeDocument(id: string): void {
+            const index = documents.value.findIndex(
+                (document) => document.id === id,
+            )
+
+            if (index < 0) {
+                return
+            }
+
+            documents.value.splice(index, 1)
+
+            if (documents.value.length === 0) {
+                documents.value.push(
+                    createDocument(createEmptyArchitecture()),
+                )
+            }
+
+            if (activeDocumentId.value === id) {
+                const next = documents.value[
+                    Math.min(index, documents.value.length - 1)
+                ]
+
+                activateDocument(next.id)
+            }
+
+            persist()
         }
 
         function replaceArchitecture(
             nextArchitecture: Architecture,
         ): void {
-            architecture.value = nextArchitecture
+            const document = activeDocument.value
 
-            undoStack.value = []
-            redoStack.value = []
+            document.architecture = nextArchitecture
+            document.undoStack = []
+            document.redoStack = []
 
-            saveArchitecture(architecture.value)
+            persist()
         }
 
         function resetArchitecture(): void {
-            architecture.value =
-                createEmptyArchitecture()
-
-            undoStack.value = []
-            redoStack.value = []
-            saveArchitecture(architecture.value)
+            replaceArchitecture(createEmptyArchitecture())
         }
 
         return {
             architecture,
+
+            tabs,
+            activeDocumentId,
 
             canUndo,
             canRedo,
@@ -143,6 +260,12 @@ export const useArchitectureStore = defineStore(
             execute,
             undo,
             redo,
+
+            openDocument,
+            openBlankDocument,
+            renameDocument,
+            activateDocument,
+            closeDocument,
 
             replaceArchitecture,
             resetArchitecture,
