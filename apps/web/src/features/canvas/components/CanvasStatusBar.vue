@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 import { useSimulationStore } from '../../simulation/stores/simulation.store'
 
 defineProps<{
@@ -11,25 +12,27 @@ defineEmits<{
 }>()
 
 const simulationStore = useSimulationStore()
+const architectureStore = useArchitectureStore()
 
-const summaryTone = computed(() => {
-  if (simulationStore.summary.startsWith('FAILED')) {
-    return 'fail'
-  }
-
-  if (simulationStore.summary.startsWith('DEGRADED')) {
-    return 'warn'
-  }
-
-  if (simulationStore.summary.startsWith('OK')) {
-    return 'ok'
-  }
+function toneFor(summary: string) {
+  if (summary.startsWith('FAILED')) return 'fail'
+  if (summary.startsWith('DEGRADED')) return 'warn'
+  if (summary.startsWith('OK')) return 'ok'
 
   return 'idle'
-})
+}
+
+const summaryTone = computed(() => toneFor(simulationStore.summary))
+const summaryToneB = computed(() => toneFor(simulationStore.summaryB))
+
+const comparing = computed(() => architectureStore.compareArchitecture !== null)
 
 function isComplete(stepId: string): boolean {
   return simulationStore.completedStepIds.includes(stepId)
+}
+
+function isCompleteB(stepId: string): boolean {
+  return simulationStore.completedStepIdsB.includes(stepId)
 }
 </script>
 
@@ -53,18 +56,43 @@ function isComplete(stepId: string): boolean {
       <span class="summary" :class="summaryTone">
         {{ simulationStore.summary }}
       </span>
+
+      <span v-if="comparing" class="summary" :class="summaryToneB">
+        {{ simulationStore.summaryB }}
+      </span>
     </div>
 
-    <div v-if="simulationStore.steps.length" class="trace">
-      <div v-for="step in simulationStore.steps" :key="step.id" class="step"
-        :class="[step.status, { pending: !isComplete(step.id) }]">
-        <span class="step-time">
-          {{ step.time }}
-        </span>
+    <div v-if="simulationStore.steps.length" class="lane">
+      <span v-if="comparing" class="lane-label">A</span>
 
-        <span class="step-label">
-          {{ step.label }}
-        </span>
+      <div class="trace">
+        <div v-for="step in simulationStore.steps" :key="step.id" class="step"
+          :class="[step.status, { pending: !isComplete(step.id) }]">
+          <span class="step-time">
+            {{ step.time }}
+          </span>
+
+          <span class="step-label">
+            {{ step.label }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="comparing && simulationStore.stepsB.length" class="lane">
+      <span class="lane-label">B</span>
+
+      <div class="trace">
+        <div v-for="step in simulationStore.stepsB" :key="step.id" class="step"
+          :class="[step.status, { pending: !isCompleteB(step.id) }]">
+          <span class="step-time">
+            {{ step.time }}
+          </span>
+
+          <span class="step-label">
+            {{ step.label }}
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -145,7 +173,22 @@ function isComplete(stepId: string): boolean {
   color: oklch(0.58 0.21 27);
 }
 
+.lane {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lane-label {
+  flex: none;
+  width: 14px;
+
+  color: oklch(0.50 0.014 258);
+  font-size: 9px;
+}
+
 .trace {
+  flex: 1;
   display: flex;
   gap: 5px;
   overflow-x: auto;

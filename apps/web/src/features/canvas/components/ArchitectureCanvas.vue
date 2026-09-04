@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import {
   VueFlow,
   useVueFlow,
@@ -22,9 +22,12 @@ import EmptyArchitectureCanvas from './EmptyArchitectureCanvas.vue'
 import { useCanvasKeyboard } from '../composables/useCanvasKeyboard'
 import { useCanvasInteractions } from '../composables/useCanvasInteractions'
 import { useCanvasSelection } from '../../canvas/composables/useCanvasSelection'
+import { useArchitectureStore } from '../../architectures/stores/architecture.store'
 
+const architectureStore = useArchitectureStore()
+const canvasEl = ref<HTMLElement | null>(null)
 const regionToolActive = ref(false)
-const { fitView, viewport, screenToFlowCoordinate } = useVueFlow()
+const { fitView, viewport, getViewport, setViewport, screenToFlowCoordinate } = useVueFlow()
 const editingAnnotationId = ref<string | null>(null)
 const toolRail = ref<InstanceType<typeof CanvasToolRail> | null>(null)
 
@@ -54,7 +57,7 @@ const {
   handleEdgeClick,
 } = useCanvasSelection()
 
-const { deleteSelection } = useCanvasKeyboard({
+useCanvasKeyboard({
   selectedNodeId,
   selectedNodeIds,
   selectedEdgeId,
@@ -128,18 +131,50 @@ function cancelTransientTools() {
   cancelRegionDraft()
 }
 
+const sidePanelWidth = 358
+
+async function fitCanvas(nodeIds?: string[]) {
+  await fitView(
+    nodeIds ? { nodes: nodeIds, padding: 0.18 } : { padding: 0.18 },
+  )
+
+  await nextTick()
+
+  const element = canvasEl.value
+
+  if (!element) {
+    return
+  }
+
+  const width = element.clientWidth
+  const height = element.clientHeight
+  const scale = (width - sidePanelWidth) / width
+  const fitted = getViewport()
+
+  setViewport({
+    zoom: fitted.zoom * scale,
+    x: fitted.x * scale,
+    y: (fitted.y - height / 2) * scale + height / 2,
+  })
+}
+
+watch(
+  () => architectureStore.compareDocumentId,
+  async () => {
+    await nextTick()
+
+    setTimeout(fitCanvas, 60)
+  },
+)
+
 async function focusPatternNodes(nodeIds: string[]) {
   await nextTick()
-  await fitView({
-    nodes: nodeIds,
-    padding: 0.25,
-    duration: 350,
-  })
+  await fitCanvas(nodeIds)
 }
 </script>
 
 <template>
-  <div class="architecture-canvas">
+  <div ref="canvasEl" class="architecture-canvas">
     <VueFlow :nodes="nodes" :edges="edges" :fit-view-on-init="true" @node-drag-stop="handleNodeDragStop"
       @connect="handleConnect" @edge-click="handleEdgeClick" @pane-click="handlePaneClick" @node-click="handleNodeClick"
       @node-double-click="handleNodeDoubleClick" :class="{ 'component-placement': pendingComponent !== null }">
@@ -175,9 +210,7 @@ async function focusPatternNodes(nodeIds: string[]) {
 
     <div v-if="regionToolActive" class="region-draw-layer" @mousedown.stop.prevent="handleRegionDrawStart" />
 
-    <button class="temporary-delete" @click="deleteSelection">Delete selected</button>
-
-    <CanvasStatusBar :zoom="viewport.zoom" @fit="fitView({ padding: 0.2, duration: 250 })" />
+    <CanvasStatusBar :zoom="viewport.zoom" @fit="fitCanvas()" />
 
     <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"
       @region-tool="handleRegionTool" />
@@ -203,6 +236,15 @@ async function focusPatternNodes(nodeIds: string[]) {
 .architecture-canvas :deep(.vue-flow) {
   width: 100%;
   height: 100%;
+}
+
+.architecture-canvas :deep(.compare-node) {
+  opacity: 0.72;
+}
+
+.architecture-canvas :deep(.compare-node .architecture-node) {
+  cursor: default;
+  box-shadow: none;
 }
 
 .architecture-canvas :deep(.node-status-ok .architecture-node) {

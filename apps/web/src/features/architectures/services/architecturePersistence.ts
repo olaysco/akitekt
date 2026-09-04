@@ -61,8 +61,3 @@ export function loadArchitectures(): Architecture[] {
 
     return isCompatibleArchitecture(legacy) ? [legacy] : []
 }
-
-export function clearSavedArchitectures() {
-    localStorage.removeItem(STORAGE_KEY)
-    localStorage.removeItem(LEGACY_STORAGE_KEY)
-}

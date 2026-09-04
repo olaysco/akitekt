@@ -40,6 +40,20 @@ function updateProtocol(protocol: Protocol) {
     })
 }
 
+const sharePercent = computed(() =>
+    Math.round((edge.value?.share ?? 1) * 100),
+)
+
+function updateShare(percent: number) {
+    if (!edge.value) return
+
+    architectureStore.execute({
+        type: 'UPDATE_EDGE',
+        edgeId: edge.value.id,
+        changes: { share: percent / 100 },
+    })
+}
+
 function updateLabel(label: string) {
     if (!edge.value) return
 
@@ -89,6 +103,22 @@ function removeEdge() {
                     <option value="stream">Stream</option>
                     <option value="custom">Custom</option>
                 </select>
+            </label>
+
+            <label class="field">
+                <div class="field-header">
+                    <span>Traffic share</span>
+
+                    <span class="field-value">{{ sharePercent }} %</span>
+                </div>
+
+                <input type="range" min="0" max="100" step="5" :value="sharePercent"
+                    @change="updateShare(Number(($event.target as HTMLInputElement).value))" />
+
+                <p class="field-hint">
+                    How much of the source's traffic takes this connection. A cache miss rate, a read replica split, a
+                    retry path.
+                </p>
             </label>
 
             <label class="field">
@@ -168,7 +198,39 @@ function removeEdge() {
     gap: 5px;
 }
 
-.field>span {
+.field-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.field-header>span:first-child {
+    flex: 1;
+}
+
+.field-value {
+    color: oklch(0.24 0.015 258);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.field-hint {
+    margin: 0;
+    color: oklch(0.55 0.014 258);
+    font-size: 10px;
+    line-height: 1.45;
+    text-wrap: pretty;
+}
+
+input[type="range"] {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    accent-color: oklch(0.60 0.19 258);
+}
+
+.field>span,
+.field-header>span:first-child {
     color: oklch(0.58 0.014 258);
     font-size: 9.5px;
     font-weight: 400;

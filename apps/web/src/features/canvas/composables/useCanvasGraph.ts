@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue'
 import { MarkerType } from '@vue-flow/core'
 import type { Edge, Node } from '@vue-flow/core'
+import type { Architecture } from '../../architectures/domain/architecture'
 import type { AddComponentPayload } from '../components/CanvasToolRail.vue'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store.ts'
 import { useSimulationStore } from '../../simulation/stores/simulation.store'
@@ -18,6 +19,21 @@ type Options = {
     regionDraft: Ref<RegionDraft | null>
     getComponentName: (payload: AddComponentPayload) => string
     getRegionBounds: (draft: RegionDraft) => { x: number; y: number; width: number; height: number }
+}
+
+const compareGapX = 240
+
+function architectureWidth(architecture: Architecture): number {
+    const nodeRight = architecture.nodes.reduce(
+        (right, node) => Math.max(right, node.position.x + (node.size?.width ?? 180)),
+        0,
+    )
+    const regionRight = architecture.regions.reduce(
+        (right, region) => Math.max(right, region.position.x + region.size.width),
+        0,
+    )
+
+    return Math.max(nodeRight, regionRight)
 }
 
 const statusStroke: Record<string, string> = {
@@ -138,11 +154,50 @@ export function useCanvasGraph(options: Options) {
             })
         }
 
+        const compare = architectureStore.compareArchitecture
+        const compareNodes: Node[] = []
+
+        if (compare) {
+            const offsetX =
+                architectureWidth(architectureStore.architecture) + compareGapX
+
+            for (const node of compare.nodes) {
+                compareNodes.push({
+                    id: `compare:${node.id}`,
+                    position: {
+                        x: node.position.x + offsetX,
+                        y: node.position.y,
+                    },
+                    draggable: false,
+                    selectable: false,
+                    connectable: false,
+                    class: simulationStore.nodeStatusB[node.id]
+                        ? `compare-node node-status-${simulationStore.nodeStatusB[node.id]}`
+                        : 'compare-node',
+                    style: node.size ? {
+                        width: `${node.size.width}px`,
+                        height: `${node.size.height}px`,
+                    } : undefined,
+                    data: {
+                        label: node.name,
+                        nodeType: node.type,
+                        technology: node.metadata.technology,
+                        instances: node.metadata.instances,
+                        timeoutMs: node.behavior.timeoutMs,
+                        properties: node.metadata.properties,
+                        kind: 'architecture',
+                    },
+                    type: 'architecture',
+                })
+            }
+        }
+
         return [
             ...regionNodes,
             ...draftRegionNodes,
             ...architectureNodes,
             ...annotationNodes,
+            ...compareNodes,
             ...placementNodes,
         ]
     })
@@ -183,6 +238,44 @@ export function useCanvasGraph(options: Options) {
         }),
     )
 
+    const compareEdges = computed<Edge[]>(() => {
+        const compare = architectureStore.compareArchitecture
+
+        if (!compare) return []
+
+        return compare.edges.map((edge) => {
+            const status = simulationStore.edgeStatusB[edge.id]
+            const dashed = edge.type === 'async' || edge.type === 'event' || edge.type === 'stream'
+            const stroke = status
+                ? statusStroke[status]
+                : 'oklch(0.78 0.010 258)'
+
+            return {
+                id: `compare:${edge.id}`,
+                source: `compare:${edge.source.nodeId}`,
+                target: `compare:${edge.target.nodeId}`,
+                label: edge.label,
+                selectable: false,
+                animated: status !== undefined && simulationStore.running,
+                data: {
+                    edgeType: edge.type,
+                    protocol: edge.protocol,
+                },
+                style: {
+                    stroke,
+                    strokeWidth: status ? 2 : 1.4,
+                    strokeDasharray: dashed ? '5 4' : undefined,
+                },
+                markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    width: 7,
+                    height: 7,
+                    color: stroke,
+                },
+            }
+        })
+    })
+
     const isArchitectureEmpty = computed(() =>
         architectureStore.architecture.nodes.length === 0 &&
         architectureStore.architecture.edges.length === 0 &&
@@ -190,9 +283,14 @@ export function useCanvasGraph(options: Options) {
         architectureStore.architecture.annotations.length === 0,
     )
 
+    const allEdges = computed<Edge[]>(() => [
+        ...edges.value,
+        ...compareEdges.value,
+    ])
+
     return {
         nodes,
-        edges,
+        edges: allEdges,
         isArchitectureEmpty,
     }
 }

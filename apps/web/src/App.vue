@@ -31,6 +31,27 @@ watch(
   },
 )
 
+function toggleCompare() {
+  if (architectureStore.compareDocumentId) {
+    architectureStore.setCompareDocument(null)
+    return
+  }
+
+  const documents = architectureStore.comparableDocuments
+  const preferred = documents.find((document) => document.hasContent) ?? documents[0]
+
+  if (preferred) {
+    architectureStore.setCompareDocument(preferred.id)
+  }
+}
+
+function runSimulation() {
+  simulationStore.run(
+    architectureStore.architecture,
+    architectureStore.compareArchitecture,
+  )
+}
+
 function resetWorkspace() {
   simulationStore.reset()
   simulationStore.clearInjection()
@@ -63,6 +84,25 @@ function resetWorkspace() {
         </button>
       </div>
 
+      <div v-if="architectureStore.comparableDocuments.length" class="compare">
+        <button :class="{ picked: !architectureStore.compareDocumentId }"
+          @click="architectureStore.setCompareDocument(null)">
+          A · current
+        </button>
+
+        <button :class="{ picked: architectureStore.compareDocumentId }" @click="toggleCompare">
+          A / B compare
+        </button>
+      </div>
+
+      <select v-if="architectureStore.compareDocumentId" class="compare-pick"
+        :value="architectureStore.compareDocumentId"
+        @change="architectureStore.setCompareDocument(($event.target as HTMLSelectElement).value)">
+        <option v-for="document in architectureStore.comparableDocuments" :key="document.id" :value="document.id">
+          B · {{ document.name }}
+        </option>
+      </select>
+
       <span class="spacer" />
 
       <button class="injection-chip" :class="{ active: simulationStore.injection }"
@@ -74,7 +114,7 @@ function resetWorkspace() {
         Reset
       </button>
 
-      <button class="run" :disabled="simulationStore.running" @click="simulationStore.run(architectureStore.architecture)">
+      <button class="run" :disabled="simulationStore.running" @click="runSimulation">
         {{ simulationStore.running ? 'Running…' : 'Run' }}
       </button>
     </header>
@@ -163,6 +203,50 @@ function resetWorkspace() {
 
 .spacer {
   flex: 1;
+}
+
+.compare {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+
+  padding: 2px;
+
+  border: 1px solid oklch(0.895 0.008 258);
+  border-radius: 7px;
+}
+
+.compare button {
+  padding: 4px 9px;
+
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+
+  color: oklch(0.52 0.014 258);
+  font-family: inherit;
+  font-size: 10.5px;
+
+  cursor: pointer;
+}
+
+.compare button.picked {
+  background: oklch(0.95 0.025 258);
+  color: oklch(0.44 0.19 258);
+  font-weight: 600;
+}
+
+.compare-pick {
+  max-width: 170px;
+  padding: 4px 7px;
+
+  background: transparent;
+  border: 1px solid oklch(0.895 0.008 258);
+  border-radius: 6px;
+
+  color: oklch(0.45 0.014 258);
+  font-family: inherit;
+  font-size: 10.5px;
 }
 
 .injection-chip {

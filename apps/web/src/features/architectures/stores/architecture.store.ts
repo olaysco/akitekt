@@ -68,6 +68,8 @@ export const useArchitectureStore = defineStore(
             documents.value[0].id,
         )
 
+        const compareDocumentId = ref<string | null>(null)
+
         const activeDocument = computed(
             () =>
                 documents.value.find(
@@ -77,6 +79,23 @@ export const useArchitectureStore = defineStore(
 
         const architecture = computed(
             () => activeDocument.value.architecture,
+        )
+
+        const compareArchitecture = computed(
+            () =>
+                documents.value.find(
+                    (document) => document.id === compareDocumentId.value,
+                )?.architecture ?? null,
+        )
+
+        const comparableDocuments = computed(() =>
+            documents.value
+                .filter((document) => document.id !== activeDocumentId.value)
+                .map((document) => ({
+                    id: document.id,
+                    name: document.architecture.name,
+                    hasContent: document.architecture.nodes.length > 0,
+                })),
         )
 
         const tabs = computed(() =>
@@ -221,8 +240,17 @@ export const useArchitectureStore = defineStore(
             persist()
         }
 
+        function setCompareDocument(id: string | null): void {
+            compareDocumentId.value =
+                id === activeDocumentId.value ? null : id
+        }
+
         function activateDocument(id: string): void {
             activeDocumentId.value = id
+
+            if (compareDocumentId.value === id) {
+                compareDocumentId.value = null
+            }
         }
 
         function closeDocument(id: string): void {
@@ -235,6 +263,10 @@ export const useArchitectureStore = defineStore(
             }
 
             documents.value.splice(index, 1)
+
+            if (compareDocumentId.value === id) {
+                compareDocumentId.value = null
+            }
 
             if (documents.value.length === 0) {
                 documents.value.push(
@@ -271,9 +303,12 @@ export const useArchitectureStore = defineStore(
 
         return {
             architecture,
+            compareArchitecture,
+            comparableDocuments,
 
             tabs,
             activeDocumentId,
+            compareDocumentId,
 
             canUndo,
             canRedo,
@@ -286,6 +321,7 @@ export const useArchitectureStore = defineStore(
             openBlankDocument,
             renameDocument,
             updateRequirements,
+            setCompareDocument,
             activateDocument,
             closeDocument,
 
