@@ -1,11 +1,11 @@
-import { CreateMLCEngine, MLCEngine } from "@mlc-ai/web-llm";
+import { CreateWebWorkerMLCEngine, WebWorkerMLCEngine } from "@mlc-ai/web-llm";
 
 import type { AIArchitectureProvider } from '../domain/ai-architecture-provider';
 import type { AIArchitectureRequest } from '../domain/ai-architecture-request';
 import type { AIArchitectureResponse } from '../domain/ai-architecture-response';
 import type { AIArchitectureCommand } from "../domain/ai-architecture-command";
 
-const selectedModel = "Llama-3.2-1B-Instruct-q4f32_1-MLC";
+const selectedModel = "Llama-3.2-1B-Instruct-q0f32-MLC";
 
 const architectureInstructions = `You are Akitekt's architecture-planning assistant.
 Return a valid JSON object matching the requested schema.
@@ -135,7 +135,7 @@ const responseSchema = {
 };
 
 export function createLocalAIArchitectureProvider(): AIArchitectureProvider {
-    let enginePromise: Promise<MLCEngine> | null = null;
+    let enginePromise: Promise<WebWorkerMLCEngine> | null = null;
 
     const initProgressCallback = (initProgress: any) => {
         console.log(initProgress);
@@ -143,7 +143,13 @@ export function createLocalAIArchitectureProvider(): AIArchitectureProvider {
 
     const getEngine = () => {
         if (!enginePromise) {
-            enginePromise = CreateMLCEngine(selectedModel, { initProgressCallback });
+                enginePromise = CreateWebWorkerMLCEngine(
+                    new Worker(new URL("./llm-worker.ts", import.meta.url), {
+                    type: "module",
+                    }),
+                    selectedModel,
+                    { initProgressCallback }, // engineConfig
+                );
         }
         return enginePromise;
     };
