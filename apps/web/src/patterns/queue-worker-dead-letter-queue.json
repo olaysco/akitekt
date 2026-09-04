@@ -1,0 +1,27 @@
+{
+  "id": "queue-worker-dead-letter-queue",
+  "name": "Queue + Worker + Dead Letter Queue",
+  "group": "Messaging",
+  "status": "runnable",
+  "description": "Buffer accepted work, process it asynchronously, and retain exhausted failures.",
+  "scenario": { "offeredLoadPerMinute": 60000, "consumerInstances": 6 },
+  "template": {
+    "regions": [
+      { "id": "ingress", "name": "Ingress", "type": "service-boundary", "position": { "x": 0, "y": 0 }, "size": { "width": 300, "height": 260 } },
+      { "id": "processing", "name": "Async processing", "type": "service-boundary", "position": { "x": 360, "y": 0 }, "size": { "width": 760, "height": 260 } }
+    ],
+    "nodes": [
+      { "id": "api", "type": "service", "name": "Order API", "description": "Accepts work and publishes it for asynchronous processing.", "position": { "x": 80, "y": 100 }, "metadata": { "technology": "HTTP service", "instances": 3 }, "behavior": { "capacity": { "requestsPerSecond": 800 }, "availability": 99.9 }, "regionId": "ingress" },
+      { "id": "queue", "type": "queue", "name": "Order Queue", "description": "Buffers accepted orders for workers.", "position": { "x": 380, "y": 100 }, "metadata": { "technology": "RabbitMQ" }, "behavior": { "availability": 99.9 }, "regionId": "processing" },
+      { "id": "worker", "type": "worker", "name": "Order Worker", "description": "Processes queued orders idempotently.", "position": { "x": 660, "y": 70 }, "metadata": { "technology": "Worker", "instances": 6 }, "behavior": { "capacity": { "requestsPerSecond": 40 }, "retry": { "maxAttempts": 3, "backoffMs": 500, "exponential": true }, "idempotent": true }, "regionId": "processing" },
+      { "id": "database", "type": "database", "name": "Orders Database", "description": "Stores completed order processing state.", "position": { "x": 940, "y": 70 }, "metadata": { "technology": "PostgreSQL" }, "behavior": { "latencyMs": 12, "availability": 99.95 }, "regionId": "processing" },
+      { "id": "dead-letter-queue", "type": "queue", "name": "Dead Letter Queue", "description": "Holds messages that exceed the worker retry policy.", "position": { "x": 660, "y": 220 }, "metadata": { "technology": "RabbitMQ" }, "behavior": {}, "regionId": "processing" }
+    ],
+    "edges": [
+      { "id": "api-queue", "source": { "nodeId": "api" }, "target": { "nodeId": "queue" }, "type": "event", "protocol": "amqp", "label": "order accepted", "behavior": { "retry": { "maxAttempts": 3, "backoffMs": 100 } } },
+      { "id": "queue-worker", "source": { "nodeId": "queue" }, "target": { "nodeId": "worker" }, "type": "async", "protocol": "amqp", "label": "consume", "behavior": {} },
+      { "id": "worker-database", "source": { "nodeId": "worker" }, "target": { "nodeId": "database" }, "type": "query", "protocol": "sql", "label": "persist", "behavior": { "timeoutMs": 300 } },
+      { "id": "worker-dead-letter-queue", "source": { "nodeId": "worker" }, "target": { "nodeId": "dead-letter-queue" }, "type": "event", "protocol": "amqp", "label": "retries exhausted", "behavior": {} }
+    ]
+  }
+}

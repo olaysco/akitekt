@@ -1,0 +1,23 @@
+{
+  "id": "cache-aside",
+  "name": "Cache Aside",
+  "group": "Distributed systems",
+  "status": "runnable",
+  "description": "Read through a cache before loading the source-of-truth database.",
+  "scenario": { "offeredLoadPerMinute": 60000 },
+  "template": {
+    "regions": [
+      { "id": "application", "name": "Application", "type": "service-boundary", "position": { "x": 0, "y": 0 }, "size": { "width": 500, "height": 260 } },
+      { "id": "data", "name": "Data", "type": "service-boundary", "position": { "x": 560, "y": 0 }, "size": { "width": 500, "height": 260 } }
+    ],
+    "nodes": [
+      { "id": "api", "type": "service", "name": "Catalog API", "description": "Reads through the cache before querying the database.", "position": { "x": 80, "y": 100 }, "metadata": { "technology": "HTTP service", "instances": 3 }, "behavior": { "capacity": { "requestsPerSecond": 1000 }, "availability": 99.9 }, "regionId": "application" },
+      { "id": "cache", "type": "cache", "name": "Catalog Cache", "description": "Stores frequently requested catalog reads.", "position": { "x": 400, "y": 70 }, "metadata": { "technology": "Redis" }, "behavior": { "latencyMs": 2, "availability": 99.9 }, "regionId": "data" },
+      { "id": "database", "type": "database", "name": "Catalog Database", "description": "Source of truth for catalog data.", "position": { "x": 400, "y": 210 }, "metadata": { "technology": "PostgreSQL" }, "behavior": { "latencyMs": 12, "availability": 99.95 }, "regionId": "data" }
+    ],
+    "edges": [
+      { "id": "api-cache", "source": { "nodeId": "api" }, "target": { "nodeId": "cache" }, "type": "query", "protocol": "tcp", "label": "cache lookup", "behavior": { "timeoutMs": 40 } },
+      { "id": "api-database", "source": { "nodeId": "api" }, "target": { "nodeId": "database" }, "type": "query", "protocol": "sql", "label": "cache miss", "behavior": { "timeoutMs": 300, "retry": { "maxAttempts": 2, "backoffMs": 50 } } }
+    ]
+  }
+}

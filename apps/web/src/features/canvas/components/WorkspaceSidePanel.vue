@@ -4,7 +4,9 @@ import AIArchitecturePanel from '../../ai/components/AIArchitecturePanel.vue'
 import { createLocalAIArchitectureProvider } from '../../ai/services/local-ai-architectecture-provider'
 import { createHTTPAIArchitectureProvider } from '../../ai/services/create-http-ai-architecture-provider'
 import { useArchitectureStore } from '../../architectures/stores/architecture.store'
-import { patternGroups } from '../../patterns/domain/pattern'
+import type { RunnablePattern } from '../../patterns/domain/pattern'
+import { createPatternAppendPlan } from '../../patterns/services/create-pattern-load-operation'
+import { patternGroups, runnablePatterns } from '../../patterns/services/pattern-library'
 
 type WorkspaceTab = 'architect' | 'patterns' | 'load' | 'review'
 
@@ -28,6 +30,9 @@ type Concern = {
 
 const activeTab = ref<WorkspaceTab>('architect')
 const architectureStore = useArchitectureStore()
+const emit = defineEmits<{
+  focusNodes: [nodeIds: string[]]
+}>()
 
 const getAIProvider = (type: string) => {
   switch (type) {
@@ -38,7 +43,7 @@ const getAIProvider = (type: string) => {
   }
 }
 
-const provider = getAIProvider("local") 
+const provider = getAIProvider("remote") 
 
 const tabs: { id: WorkspaceTab; label: string }[] = [
   { id: 'architect', label: 'Architect' },
@@ -53,6 +58,16 @@ const consumerInstances = ref(10)
 const architecture = computed(
   () => architectureStore.architecture,
 )
+
+function openPatternExample(pattern: RunnablePattern) {
+  const plan = createPatternAppendPlan(
+    architectureStore.architecture,
+    pattern,
+  )
+
+  architectureStore.execute(plan.operation)
+  emit('focusNodes', plan.nodeIds)
+}
 
 function formatPerMinute(value: number): string {
   if (value < 1000) {
@@ -137,6 +152,26 @@ const concerns = computed<Concern[]>(() => {
 
     <template v-else-if="activeTab === 'patterns'">
       <div class="tab-body scrollable pattern-list">
+        <div class="group-title">
+          Runnable patterns
+        </div>
+
+        <div v-for="pattern in runnablePatterns" :key="pattern.id" class="runnable-pattern">
+          <div>
+            <div class="pattern-name">
+              {{ pattern.name }}
+            </div>
+
+            <p class="pattern-description">
+              {{ pattern.description }}
+            </p>
+          </div>
+
+          <button type="button" @click="openPatternExample(pattern)">
+            Open on canvas
+          </button>
+        </div>
+
         <template v-for="group in patternGroups" :key="group.id">
           <div class="group-title">
             {{ group.title }}
@@ -155,7 +190,7 @@ const concerns = computed<Concern[]>(() => {
       </div>
 
       <p class="tab-note">
-        Each one loads onto this canvas as a runnable architecture with a scenario attached.
+        Open a pattern below your existing work and explore its starting simulation scenario.
       </p>
     </template>
 
@@ -326,6 +361,36 @@ const concerns = computed<Concern[]>(() => {
   font-size: 10.5px;
   line-height: 1.55;
   text-wrap: pretty;
+}
+
+.runnable-pattern {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 13px;
+  border-bottom: 1px solid oklch(0.94 0.006 258);
+}
+
+.pattern-description {
+  max-width: 220px;
+  margin: 4px 0 0;
+  color: oklch(0.52 0.014 258);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.runnable-pattern button {
+  flex: none;
+  padding: 5px 8px;
+  border: 1px solid oklch(0.72 0.12 258);
+  border-radius: 6px;
+  background: oklch(0.97 0.025 258);
+  color: oklch(0.44 0.19 258);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .tab-note.inline {

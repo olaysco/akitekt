@@ -1,12 +1,35 @@
-export type PatternStatus =
-  | 'draft'
-  | 'runnable'
-  | 'lesson'
+import type { ArchitectureEdge } from '../../architectures/domain/edge'
+import type { ArchitectureNode } from '../../architectures/domain/node'
+import type { ArchitectureRegion } from '../../architectures/domain/region'
+
+export type PatternStatus = 'draft' | 'runnable' | 'lesson'
+
+export type PatternScenario = {
+  offeredLoadPerMinute: number
+  consumerInstances?: number
+}
+
+type TemplateItem<T> = Omit<T, 'id'> & { id: string }
+
+export type PatternTemplate = {
+  regions: TemplateItem<ArchitectureRegion>[]
+  nodes: TemplateItem<ArchitectureNode>[]
+  edges: TemplateItem<ArchitectureEdge>[]
+}
 
 export type Pattern = {
   id: string
   name: string
+  group: string
   status: PatternStatus
+  description?: string
+}
+
+export type RunnablePattern = Pattern & {
+  status: 'runnable'
+  description: string
+  scenario: PatternScenario
+  template: PatternTemplate
 }
 
 export type PatternGroup = {
@@ -14,49 +37,3 @@ export type PatternGroup = {
   title: string
   patterns: Pattern[]
 }
-
-function pattern(name: string): Pattern {
-  return {
-    id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-    name,
-    status: 'draft',
-  }
-}
-
-function group(title: string, names: string[]): PatternGroup {
-  return {
-    id: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-    title,
-    patterns: names.map(pattern),
-  }
-}
-
-export const patternGroups: PatternGroup[] = [
-  group('Distributed systems', [
-    'Transactional Outbox',
-    'Saga',
-    'Circuit Breaker',
-    'Retry + Backoff',
-    'Dead Letter Queue',
-    'CQRS',
-    'Event Sourcing',
-    'Idempotent Consumer',
-    'Cache Aside',
-    'Bulkhead',
-  ]),
-
-  group('Infrastructure', [
-    'Load Balancing',
-    'Database Replication',
-    'Sharding',
-    'Leader Election',
-    'Service Discovery',
-  ]),
-
-  group('Messaging', [
-    'RabbitMQ',
-    'Kafka',
-    'Pub / Sub',
-    'SQS',
-  ]),
-]

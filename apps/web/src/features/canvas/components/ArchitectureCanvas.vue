@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 import {
   VueFlow,
   useVueFlow,
@@ -23,7 +23,7 @@ import { useCanvasInteractions } from '../composables/useCanvasInteractions'
 import { useCanvasSelection } from '../../canvas/composables/useCanvasSelection'
 
 const regionToolActive = ref(false)
-const { screenToFlowCoordinate } = useVueFlow()
+const { fitView, screenToFlowCoordinate } = useVueFlow()
 const editingAnnotationId = ref<string | null>(null)
 const toolRail = ref<InstanceType<typeof CanvasToolRail> | null>(null)
 
@@ -126,6 +126,15 @@ function cancelTransientTools() {
   cancelTools()
   cancelRegionDraft()
 }
+
+async function focusPatternNodes(nodeIds: string[]) {
+  await nextTick()
+  await fitView({
+    nodes: nodeIds,
+    padding: 0.25,
+    duration: 350,
+  })
+}
 </script>
 
 <template>
@@ -173,7 +182,7 @@ function cancelTransientTools() {
     <ContextualSidePanel v-if="hasContextualSelection" :selected-node-id="selectedNodeId"
       :selected-node-ids="selectedNodeIds" :selected-edge-id="selectedEdgeId" :selected-region-id="selectedRegionId" />
 
-    <WorkspaceSidePanel v-else />
+    <WorkspaceSidePanel v-else @focus-nodes="focusPatternNodes" />
 
   </div>
 </template>
