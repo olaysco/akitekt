@@ -247,10 +247,7 @@ export const useArchitectureStore = defineStore(
 
         function activateDocument(id: string): void {
             activeDocumentId.value = id
-
-            if (compareDocumentId.value === id) {
-                compareDocumentId.value = null
-            }
+            compareDocumentId.value = null
         }
 
         function closeDocument(id: string): void {
