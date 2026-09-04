@@ -7,6 +7,7 @@ export type PatternStatus = 'lesson'
 export type PatternScenario = {
   offeredLoadPerMinute: number
   consumerInstances?: number
+  latencyBudgetMs?: number
 }
 
 type TemplateItem<T> = Omit<T, 'id'> & { id: string }

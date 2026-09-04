@@ -34,8 +34,21 @@ const tabs: { id: WorkspaceTab; label: string }[] = [
   { id: 'load', label: 'Load' },
 ]
 
-const offeredLoad = ref(60000)
 const consumerInstances = ref(10)
+
+const offeredLoad = computed({
+  get: () => architectureStore.architecture.requirements?.offeredLoadPerMinute ?? 60000,
+  set: (offeredLoadPerMinute: number) =>
+    architectureStore.updateRequirements({ offeredLoadPerMinute }),
+})
+
+const latencyBudget = computed({
+  get: () => architectureStore.architecture.requirements?.latencyBudgetMs ?? 0,
+  set: (value: number) =>
+    architectureStore.updateRequirements({
+      latencyBudgetMs: value > 0 ? value : undefined,
+    }),
+})
 
 const architecture = computed(
   () => architectureStore.architecture,
@@ -45,7 +58,6 @@ function openLesson(lesson: Lesson) {
   const architecture = createLessonArchitecture(lesson)
 
   architectureStore.openDocument(architecture)
-  offeredLoad.value = lesson.scenario.offeredLoadPerMinute
   if (lesson.scenario.consumerInstances !== undefined) {
     consumerInstances.value = lesson.scenario.consumerInstances
   }
@@ -134,6 +146,23 @@ const concerns = computed(() => simulation.value.concerns)
 
         <div class="slider-block">
           <div class="slider-header">
+            <span class="eyebrow">p99 latency budget</span>
+
+            <span class="slider-value">
+              {{ latencyBudget > 0 ? `${latencyBudget} ms` : 'none' }}
+            </span>
+          </div>
+
+          <input v-model.number="latencyBudget" type="range" min="0" max="5000" step="50" />
+
+          <div class="slider-bounds">
+            <span>none</span>
+            <span>5000 ms</span>
+          </div>
+        </div>
+
+        <div class="slider-block">
+          <div class="slider-header">
             <span class="eyebrow">Consumer instances</span>
 
             <span class="slider-value">
@@ -155,7 +184,8 @@ const concerns = computed(() => simulation.value.concerns)
             </span>
 
             <span class="pill" :class="row.tone">
-              {{ formatPerMinute(row.capacityPerMinute) }} · {{ Math.round(row.utilization * 100) }}%
+              {{ formatPerMinute(row.loadPerMinute) }} / {{ formatPerMinute(row.capacityPerMinute) }}
+              · {{ Math.round(row.utilization * 100) }}%
             </span>
           </div>
 
@@ -170,7 +200,8 @@ const concerns = computed(() => simulation.value.concerns)
         </p>
 
         <p class="tab-note inline">
-          An architecture reasoning simulator, not a load test. Capacity comes from properties on the graph.
+          An architecture reasoning simulator, not a load test. Load flows along edges by their share, and capacity
+          comes from properties on the graph.
         </p>
       </div>
     </template>

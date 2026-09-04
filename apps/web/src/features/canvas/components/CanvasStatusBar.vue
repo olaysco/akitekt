@@ -37,7 +37,7 @@ function isComplete(stepId: string): boolean {
   <div class="canvas-status-bar">
     <div class="status-header">
       <span class="eyebrow">
-        execution trace
+        Execution Trace
       </span>
 
       <span class="spacer" />
@@ -98,7 +98,6 @@ function isComplete(stepId: string): boolean {
   color: oklch(0.58 0.014 258);
   font-size: 8.5px;
   letter-spacing: 0.15em;
-  text-transform: uppercase;
 }
 
 .spacer {

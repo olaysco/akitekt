@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import type { Architecture } from '../domain/architecture'
+import type { Architecture, ArchitectureRequirements } from '../domain/architecture'
 import type { DocumentOperation } from '../domain/operation'
 
 import { applyOperation } from '../operations/applyOperation'
@@ -25,6 +25,10 @@ function createEmptyArchitecture(): Architecture {
         id: crypto.randomUUID(),
         name: 'Untitled Architecture',
         schemaVersion: 1,
+
+        requirements: {
+            offeredLoadPerMinute: 60000,
+        },
 
         nodes: [],
         edges: [],
@@ -177,6 +181,23 @@ export const useArchitectureStore = defineStore(
             openDocument(createEmptyArchitecture())
         }
 
+        function updateRequirements(
+            changes: Partial<ArchitectureRequirements>,
+        ): void {
+            const document = activeDocument.value
+
+            document.architecture = {
+                ...document.architecture,
+                requirements: {
+                    offeredLoadPerMinute: 60000,
+                    ...document.architecture.requirements,
+                    ...changes,
+                },
+            }
+
+            persist()
+        }
+
         function renameDocument(id: string, name: string): void {
             const document = documents.value.find(
                 (item) => item.id === id,
@@ -264,6 +285,7 @@ export const useArchitectureStore = defineStore(
             openDocument,
             openBlankDocument,
             renameDocument,
+            updateRequirements,
             activateDocument,
             closeDocument,
 

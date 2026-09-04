@@ -5,7 +5,8 @@
   "status": "lesson",
   "description": "Read through a cache before loading the source-of-truth database.",
   "scenario": {
-    "offeredLoadPerMinute": 60000
+    "offeredLoadPerMinute": 60000,
+    "latencyBudgetMs": 50
   },
   "template": {
     "regions": [
@@ -52,7 +53,7 @@
         },
         "behavior": {
           "capacity": {
-            "requestsPerSecond": 1000
+            "requestsPerSecond": 1200
           },
           "availability": 99.9
         },
@@ -72,7 +73,10 @@
         },
         "behavior": {
           "latencyMs": 2,
-          "availability": 99.9
+          "availability": 99.9,
+          "capacity": {
+            "requestsPerSecond": 5000
+          }
         },
         "regionId": "data"
       },
@@ -90,7 +94,10 @@
         },
         "behavior": {
           "latencyMs": 12,
-          "availability": 99.95
+          "availability": 99.95,
+          "capacity": {
+            "requestsPerSecond": 200
+          }
         },
         "regionId": "data"
       }
@@ -109,7 +116,8 @@
         "label": "cache lookup",
         "behavior": {
           "timeoutMs": 40
-        }
+        },
+        "share": 1
       },
       {
         "id": "api-database",
@@ -128,7 +136,8 @@
             "maxAttempts": 2,
             "backoffMs": 50
           }
-        }
+        },
+        "share": 0.1
       }
     ]
   }

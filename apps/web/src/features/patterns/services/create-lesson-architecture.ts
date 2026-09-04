@@ -40,6 +40,11 @@ export function createLessonArchitecture(lesson: Lesson): Architecture {
     name: lesson.name,
     schemaVersion: 1,
 
+    requirements: {
+      offeredLoadPerMinute: lesson.scenario.offeredLoadPerMinute,
+      latencyBudgetMs: lesson.scenario.latencyBudgetMs,
+    },
+
     nodes,
     edges,
     regions,

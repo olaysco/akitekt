@@ -48,6 +48,8 @@ export type ArchitectureEdge = {
   type: EdgeType
   protocol?: Protocol
 
+  share?: number
+
   label?: string
   behavior: EdgeBehavior
 }

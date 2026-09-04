@@ -178,16 +178,28 @@ export function createExecutionTrace(
   const slowest = Math.round(
     steps.reduce((total, step) => Math.max(total, step.elapsedMs), 0),
   )
+  const budgetMs = architecture.requirements?.latencyBudgetMs
+  const overBudget = budgetMs !== undefined && slowest > budgetMs
+
   const failed = steps.some((step) => step.status === 'fail')
   const degraded = steps.some((step) => step.status === 'warn')
+  const status: TraceStatus = failed || overBudget
+    ? 'fail'
+    : degraded
+      ? 'warn'
+      : 'ok'
+
+  const budgetNote = budgetMs === undefined
+    ? ''
+    : overBudget
+      ? ` · over ${budgetMs} ms budget`
+      : ` · within ${budgetMs} ms budget`
 
   return {
     steps,
-    status: failed ? 'fail' : degraded ? 'warn' : 'ok',
-    summary: failed
-      ? `FAILED · ${slowest} ms`
-      : degraded
-        ? `DEGRADED · ${slowest} ms`
-        : `OK · ${slowest} ms`,
+    status,
+    summary: `${
+      status === 'fail' ? 'FAILED' : status === 'warn' ? 'DEGRADED' : 'OK'
+    } · ${slowest} ms${budgetNote}`,
   }
 }

@@ -10,11 +10,18 @@ export type ArchitectureMetadata = {
   updatedAt?: string
 }
 
+export type ArchitectureRequirements = {
+  offeredLoadPerMinute: number
+  latencyBudgetMs?: number
+}
+
 export type Architecture = {
   id: string
   name: string
 
   schemaVersion: number
+
+  requirements?: ArchitectureRequirements
 
   nodes: ArchitectureNode[]
   edges: ArchitectureEdge[]
