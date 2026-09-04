@@ -48,6 +48,7 @@ export const useSimulationStore = defineStore(
     const laneB = ref<Lane | null>(null)
     const running = ref(false)
     const injection = ref<Injection | null>(null)
+    const speed = ref(1)
 
     let timers: ReturnType<typeof setTimeout>[] = []
 
@@ -76,15 +77,17 @@ export const useSimulationStore = defineStore(
     }
 
     function play(lane: Lane, steps: TraceStep[], summary: string) {
+      const interval = stepDurationMs / speed.value
+
       steps.forEach((step, index) => {
         timers.push(setTimeout(() => {
           lane.completedStepIds = [...lane.completedStepIds, step.id]
-        }, index * stepDurationMs))
+        }, index * interval))
       })
 
       timers.push(setTimeout(() => {
         lane.summary = summary
-      }, steps.length * stepDurationMs))
+      }, steps.length * interval))
     }
 
     function run(
@@ -128,7 +131,7 @@ export const useSimulationStore = defineStore(
       if (longest > 0) {
         timers.push(setTimeout(() => {
           running.value = false
-        }, longest * stepDurationMs))
+        }, (longest * stepDurationMs) / speed.value))
       }
     }
 
@@ -161,6 +164,7 @@ export const useSimulationStore = defineStore(
 
       running,
       injection,
+      speed,
 
       edgeStatus,
       nodeStatus,

@@ -26,6 +26,7 @@ import { useArchitectureStore } from '../../architectures/stores/architecture.st
 
 const architectureStore = useArchitectureStore()
 const canvasEl = ref<HTMLElement | null>(null)
+const panelCollapsed = ref(false)
 const regionToolActive = ref(false)
 const { fitView, viewport, getViewport, setViewport, screenToFlowCoordinate } = useVueFlow()
 const editingAnnotationId = ref<string | null>(null)
@@ -133,6 +134,12 @@ function cancelTransientTools() {
 
 const sidePanelWidth = 358
 
+function togglePanel() {
+  panelCollapsed.value = !panelCollapsed.value
+
+  setTimeout(fitCanvas, 60)
+}
+
 async function fitCanvas(nodeIds?: string[]) {
   await fitView(
     nodeIds ? { nodes: nodeIds, padding: 0.18 } : { padding: 0.18 },
@@ -148,7 +155,8 @@ async function fitCanvas(nodeIds?: string[]) {
 
   const width = element.clientWidth
   const height = element.clientHeight
-  const scale = (width - sidePanelWidth) / width
+  const reserved = panelCollapsed.value ? 0 : sidePanelWidth
+  const scale = (width - reserved) / width
   const fitted = getViewport()
 
   setViewport({
@@ -210,15 +218,16 @@ async function focusPatternNodes(nodeIds: string[]) {
 
     <div v-if="regionToolActive" class="region-draw-layer" @mousedown.stop.prevent="handleRegionDrawStart" />
 
-    <CanvasStatusBar :zoom="viewport.zoom" @fit="fitCanvas()" />
+    <CanvasStatusBar :zoom="viewport.zoom" :panel-collapsed="panelCollapsed" @fit="fitCanvas()"
+      @toggle-panel="togglePanel" />
 
     <CanvasToolRail ref="toolRail" @add-component="selectComponent" @annotation-tool="handleAnnotationTool"
       @region-tool="handleRegionTool" />
 
-    <ContextualSidePanel v-if="hasContextualSelection" :selected-node-id="selectedNodeId"
+    <ContextualSidePanel v-if="!panelCollapsed && hasContextualSelection" :selected-node-id="selectedNodeId"
       :selected-node-ids="selectedNodeIds" :selected-edge-id="selectedEdgeId" :selected-region-id="selectedRegionId" />
 
-    <WorkspaceSidePanel v-else @focus-nodes="focusPatternNodes" />
+    <WorkspaceSidePanel v-else-if="!panelCollapsed" @focus-nodes="focusPatternNodes" />
 
   </div>
 </template>

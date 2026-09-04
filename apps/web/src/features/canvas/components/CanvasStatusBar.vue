@@ -5,11 +5,15 @@ import { useSimulationStore } from '../../simulation/stores/simulation.store'
 
 defineProps<{
   zoom: number
+  panelCollapsed: boolean
 }>()
 
 defineEmits<{
   fit: []
+  togglePanel: []
 }>()
+
+const speeds = [0.5, 1, 2]
 
 const simulationStore = useSimulationStore()
 const architectureStore = useArchitectureStore()
@@ -37,7 +41,7 @@ function isCompleteB(stepId: string): boolean {
 </script>
 
 <template>
-  <div class="canvas-status-bar">
+  <div class="canvas-status-bar" :class="{ wide: panelCollapsed }">
     <div class="status-header">
       <span class="eyebrow">
         Execution Trace
@@ -51,6 +55,17 @@ function isCompleteB(stepId: string): boolean {
 
       <button type="button" @click="$emit('fit')">
         fit
+      </button>
+
+      <div class="speed">
+        <button v-for="option in speeds" :key="option" type="button"
+          :class="{ picked: simulationStore.speed === option }" @click="simulationStore.speed = option">
+          {{ option }}×
+        </button>
+      </div>
+
+      <button type="button" :title="panelCollapsed ? 'Show panel' : 'Hide panel'" @click="$emit('togglePanel')">
+        {{ panelCollapsed ? 'panel ‹' : 'panel ›' }}
       </button>
 
       <span class="summary" :class="summaryTone">
@@ -116,6 +131,10 @@ function isCompleteB(stepId: string): boolean {
   box-shadow: 0 2px 6px oklch(0.55 0.03 258 / 0.08);
 }
 
+.canvas-status-bar.wide {
+  right: 14px;
+}
+
 .status-header {
   display: flex;
   align-items: center;
@@ -148,10 +167,34 @@ function isCompleteB(stepId: string): boolean {
   cursor: pointer;
 }
 
-.summary {
-  padding: 3px 8px;
-  border-radius: 5px;
+.speed {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid oklch(0.895 0.008 258);
+  border-radius: 6px;
+}
+
+.speed button {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
   font-size: 10px;
+}
+
+.speed button.picked {
+  background: oklch(0.95 0.025 258);
+  color: oklch(0.44 0.19 258);
+  font-weight: 600;
+}
+
+.summary {
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .summary.idle {
