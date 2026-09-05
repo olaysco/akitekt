@@ -1,5 +1,7 @@
 # Akitekt
 
+![App Interface](docs/shot.png)
+
 Akitekt is a visual architecture workspace. The architecture document is the source of truth; the canvas and AI assistant both work through document operations.
 
 ## Run locally

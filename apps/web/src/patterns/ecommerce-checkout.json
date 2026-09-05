@@ -1,0 +1,331 @@
+{
+  "id": "ecommerce-checkout",
+  "name": "E-commerce Checkout",
+  "group": "Distributed systems",
+  "status": "lesson",
+  "description": "Browse traffic reads through a cache while checkout traffic hits a third-party payment provider and fans out to async workers.",
+  "scenario": {
+    "offeredLoadPerMinute": 60000,
+    "consumerInstances": 6,
+    "latencyBudgetMs": 800
+  },
+  "template": {
+    "regions": [
+      {
+        "id": "edge",
+        "name": "Edge",
+        "type": "network",
+        "position": { "x": 0, "y": 0 },
+        "size": { "width": 520, "height": 300 }
+      },
+      {
+        "id": "application",
+        "name": "Application",
+        "type": "service-boundary",
+        "position": { "x": 580, "y": 0 },
+        "size": { "width": 620, "height": 440 }
+      },
+      {
+        "id": "data",
+        "name": "Data",
+        "type": "service-boundary",
+        "position": { "x": 1260, "y": 0 },
+        "size": { "width": 520, "height": 440 }
+      },
+      {
+        "id": "async",
+        "name": "Async Processing",
+        "type": "service-boundary",
+        "position": { "x": 580, "y": 500 },
+        "size": { "width": 620, "height": 260 }
+      },
+      {
+        "id": "third-parties",
+        "name": "Third Parties",
+        "type": "cloud",
+        "position": { "x": 1260, "y": 500 },
+        "size": { "width": 520, "height": 260 }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "client",
+        "type": "client",
+        "name": "Storefront",
+        "description": "Web and mobile shoppers.",
+        "position": { "x": 60, "y": 110 },
+        "metadata": { "technology": "Web / mobile app" },
+        "behavior": {},
+        "regionId": "edge"
+      },
+      {
+        "id": "load-balancer",
+        "type": "load-balancer",
+        "name": "Load Balancer",
+        "description": "Terminates TLS and spreads traffic across gateway instances.",
+        "position": { "x": 300, "y": 110 },
+        "metadata": { "technology": "NGINX" },
+        "behavior": {
+          "latencyMs": 2,
+          "availability": 99.99,
+          "capacity": { "requestsPerSecond": 5000 }
+        },
+        "regionId": "edge"
+      },
+      {
+        "id": "gateway",
+        "type": "gateway",
+        "name": "API Gateway",
+        "description": "Authenticates requests and routes browse and checkout traffic.",
+        "position": { "x": 640, "y": 160 },
+        "metadata": { "technology": "Kong", "instances": 2 },
+        "behavior": {
+          "latencyMs": 5,
+          "availability": 99.95,
+          "capacity": { "requestsPerSecond": 800 }
+        },
+        "regionId": "application"
+      },
+      {
+        "id": "product-api",
+        "type": "service",
+        "name": "Product API",
+        "description": "Serves catalog pages, reading through the cache first.",
+        "position": { "x": 920, "y": 60 },
+        "metadata": { "technology": "HTTP service", "instances": 3 },
+        "behavior": {
+          "latencyMs": 15,
+          "availability": 99.9,
+          "capacity": { "requestsPerSecond": 400 }
+        },
+        "regionId": "application"
+      },
+      {
+        "id": "checkout-api",
+        "type": "service",
+        "name": "Checkout API",
+        "description": "Authorizes payment, persists the order and publishes an event.",
+        "position": { "x": 920, "y": 280 },
+        "metadata": { "technology": "HTTP service", "instances": 2 },
+        "behavior": {
+          "latencyMs": 40,
+          "availability": 99.9,
+          "capacity": { "requestsPerSecond": 200 }
+        },
+        "regionId": "application"
+      },
+      {
+        "id": "product-cache",
+        "type": "cache",
+        "name": "Product Cache",
+        "description": "Hot catalog reads.",
+        "position": { "x": 1320, "y": 40 },
+        "metadata": { "technology": "Redis" },
+        "behavior": {
+          "latencyMs": 2,
+          "availability": 99.9,
+          "capacity": { "requestsPerSecond": 5000 }
+        },
+        "regionId": "data"
+      },
+      {
+        "id": "product-db",
+        "type": "database",
+        "name": "Product Database",
+        "description": "Source of truth for the catalog.",
+        "position": { "x": 1320, "y": 180 },
+        "metadata": { "technology": "PostgreSQL" },
+        "behavior": {
+          "latencyMs": 12,
+          "availability": 99.95,
+          "capacity": { "requestsPerSecond": 150 }
+        },
+        "regionId": "data"
+      },
+      {
+        "id": "orders-db",
+        "type": "database",
+        "name": "Orders Database",
+        "description": "Durable record of every placed order.",
+        "position": { "x": 1320, "y": 320 },
+        "metadata": { "technology": "PostgreSQL" },
+        "behavior": {
+          "latencyMs": 18,
+          "availability": 99.95,
+          "capacity": { "requestsPerSecond": 400 }
+        },
+        "regionId": "data"
+      },
+      {
+        "id": "order-events",
+        "type": "stream",
+        "name": "Order Events",
+        "description": "Every placed order is published here for downstream consumers.",
+        "position": { "x": 640, "y": 590 },
+        "metadata": { "technology": "Kafka" },
+        "behavior": {
+          "latencyMs": 5,
+          "availability": 99.99,
+          "capacity": { "requestsPerSecond": 20000 }
+        },
+        "regionId": "async"
+      },
+      {
+        "id": "notification-worker",
+        "type": "worker",
+        "name": "Notification Worker",
+        "description": "Renders and sends the order receipt.",
+        "position": { "x": 920, "y": 590 },
+        "metadata": { "technology": "Worker" },
+        "behavior": {
+          "latencyMs": 120,
+          "availability": 99.9,
+          "capacity": { "requestsPerSecond": 40 },
+          "retry": { "maxAttempts": 3, "backoffMs": 500, "exponential": true },
+          "idempotent": true
+        },
+        "regionId": "async"
+      },
+      {
+        "id": "payment-provider",
+        "type": "external",
+        "name": "Payment Provider",
+        "description": "Third-party card authorization. Capacity is their rate limit, not ours.",
+        "position": { "x": 1320, "y": 540 },
+        "metadata": { "technology": "Stripe" },
+        "behavior": {
+          "latencyMs": 350,
+          "availability": 99.9,
+          "capacity": { "requestsPerSecond": 320 }
+        },
+        "regionId": "third-parties"
+      },
+      {
+        "id": "email-provider",
+        "type": "external",
+        "name": "Email Provider",
+        "description": "Transactional email delivery.",
+        "position": { "x": 1320, "y": 660 },
+        "metadata": { "technology": "SendGrid" },
+        "behavior": {
+          "latencyMs": 200,
+          "availability": 99.9,
+          "capacity": { "requestsPerSecond": 500 }
+        },
+        "regionId": "third-parties"
+      }
+    ],
+    "edges": [
+      {
+        "id": "client-lb",
+        "source": { "nodeId": "client" },
+        "target": { "nodeId": "load-balancer" },
+        "type": "sync",
+        "protocol": "https",
+        "label": "requests",
+        "behavior": { "timeoutMs": 5000 },
+        "share": 1
+      },
+      {
+        "id": "lb-gateway",
+        "source": { "nodeId": "load-balancer" },
+        "target": { "nodeId": "gateway" },
+        "type": "sync",
+        "protocol": "http",
+        "label": "round robin",
+        "behavior": { "timeoutMs": 5000 },
+        "share": 1
+      },
+      {
+        "id": "gateway-product",
+        "source": { "nodeId": "gateway" },
+        "target": { "nodeId": "product-api" },
+        "type": "sync",
+        "protocol": "http",
+        "label": "browse 70%",
+        "behavior": { "timeoutMs": 1000 },
+        "share": 0.7
+      },
+      {
+        "id": "gateway-checkout",
+        "source": { "nodeId": "gateway" },
+        "target": { "nodeId": "checkout-api" },
+        "type": "sync",
+        "protocol": "http",
+        "label": "checkout 30%",
+        "behavior": { "timeoutMs": 5000 },
+        "share": 0.3
+      },
+      {
+        "id": "product-cache-lookup",
+        "source": { "nodeId": "product-api" },
+        "target": { "nodeId": "product-cache" },
+        "type": "query",
+        "protocol": "tcp",
+        "label": "cache lookup",
+        "behavior": { "timeoutMs": 40 },
+        "share": 1
+      },
+      {
+        "id": "product-cache-miss",
+        "source": { "nodeId": "product-api" },
+        "target": { "nodeId": "product-db" },
+        "type": "query",
+        "protocol": "sql",
+        "label": "cache miss 10%",
+        "behavior": { "timeoutMs": 300, "retry": { "maxAttempts": 2, "backoffMs": 50 } },
+        "share": 0.1
+      },
+      {
+        "id": "checkout-payment",
+        "source": { "nodeId": "checkout-api" },
+        "target": { "nodeId": "payment-provider" },
+        "type": "sync",
+        "protocol": "https",
+        "label": "authorize card",
+        "behavior": { "timeoutMs": 3000, "retry": { "maxAttempts": 2, "backoffMs": 200 } },
+        "share": 1
+      },
+      {
+        "id": "checkout-orders-db",
+        "source": { "nodeId": "checkout-api" },
+        "target": { "nodeId": "orders-db" },
+        "type": "query",
+        "protocol": "sql",
+        "label": "persist order",
+        "behavior": { "timeoutMs": 500 },
+        "share": 1
+      },
+      {
+        "id": "checkout-events",
+        "source": { "nodeId": "checkout-api" },
+        "target": { "nodeId": "order-events" },
+        "type": "event",
+        "protocol": "kafka",
+        "label": "order placed",
+        "behavior": { "timeoutMs": 200 },
+        "share": 1
+      },
+      {
+        "id": "events-notification",
+        "source": { "nodeId": "order-events" },
+        "target": { "nodeId": "notification-worker" },
+        "type": "stream",
+        "protocol": "kafka",
+        "label": "consume",
+        "behavior": {},
+        "share": 1
+      },
+      {
+        "id": "notification-email",
+        "source": { "nodeId": "notification-worker" },
+        "target": { "nodeId": "email-provider" },
+        "type": "async",
+        "protocol": "smtp",
+        "label": "send receipt",
+        "behavior": { "timeoutMs": 2000, "retry": { "maxAttempts": 3, "backoffMs": 500, "exponential": true } },
+        "share": 1
+      }
+    ]
+  }
+}
